@@ -1,33 +1,24 @@
-const nodemailer = require('nodemailer');
-const dotenv =require('dotenv');
+// config/mailer.js
+const sgMail = require('@sendgrid/mail');
 
-dotenv.config();
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: Number(process.env.MAIL_PORT || 587),
-  secure: process.env.MAIL_SECURE === 'true', // true for 465, false for other ports
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  }
-});
-
-async function sendMail({ to, subject, text, html }) {
-  const from = process.env.MAIL_FROM || process.env.MAIL_USER;
+async function sendMail({ to, subject, html, text }) {
+  const msg = {
+    to,
+    from: process.env.SENDER_EMAIL, // must be a verified sender
+    subject,
+    text: text || 'hello from kindify', // optional plain text
+    html,
+  };
 
   try {
-    const info = await transporter.sendMail({ from, to, subject, text, html });
-    console.log('Email sent:', info);
-    return info;
+    await sgMail.send(msg);
+    console.log(`✅ Email sent to ${to}`);
+    return { success: true };
   } catch (error) {
-    console.error('SMTP sendMail failed:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response
-    });
-    throw error; // so the calling function still knows it failed
+    console.error('❌ SendGrid error:', error.response?.body || error.message);
+    throw new Error('Email sending failed');
   }
 }
 
