@@ -52,25 +52,39 @@ exports.getPosts = async (req, res) => {
     }
 
     const posts = await Post.find(filter)
-      .select('name location picture likedBy savedBy')
+      .select('name location picture pictures likedBy savedBy createdBy createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .populate('createdBy', 'trustName adminName name email role')  // Populate creator info
       .populate('likedBy', 'id name')   // Populate likedBy user info
       .populate('savedBy', 'id name');  // Populate savedBy user info
 
     const totalPosts = await Post.countDocuments(filter);
 
-    const postsWithCounts = posts.map(post => ({
-      _id: post._id,
-      name: post.name,
-      location: post.location,
-      picture: post.picture,
-      likedBy: post.likedBy,             // Array of users who liked
-      savedBy: post.savedBy,             // Array of users who saved
-      totalLikes: post.likedBy.length,
-      totalSaves: post.savedBy.length
-    }));
+    const postsWithCounts = posts.map(post => {
+      const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
+      
+      return {
+        _id: post._id,
+        name: creatorName, // Show creator's name instead of post title
+        postTitle: post.name, // Keep original post title in separate field
+        location: post.location,
+        picture: post.picture,
+        pictures: post.pictures,
+        createdBy: {
+          id: post.createdBy._id,
+          name: creatorName,
+          email: post.createdBy.email,
+          role: post.createdBy.role
+        },
+        createdAt: post.createdAt,
+        likedBy: post.likedBy,             // Array of users who liked
+        savedBy: post.savedBy,             // Array of users who saved
+        totalLikes: post.likedBy.length,
+        totalSaves: post.savedBy.length
+      };
+    });
 
     res.status(200).json({
       success: true,
