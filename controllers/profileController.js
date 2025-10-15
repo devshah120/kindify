@@ -2,13 +2,15 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const Support = require('../models/Support');
 const Supporter = require('../models/Supporter');
+const fs = require('fs');
+const path = require('path');
 
 exports.getProfile = async (req, res) => {
   try {
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .select('trustName adminName name email mobile darpanId designation address role createdAt')
+      .select('trustName adminName name email mobile phone darpanId profilePhoto designation address state city pincode fullAddress role createdAt')
       .lean();
 
     if (!user) {
@@ -34,6 +36,7 @@ exports.getProfile = async (req, res) => {
         adminName: user.adminName,
         mobile: user.mobile,
         darpanId: user.darpanId,
+        profilePhoto: user.profilePhoto ? `/uploads/profilePhotos/${user.profilePhoto}` : null,
         designation: user.designation || 'Food Donator',
         address: user.address || 'Ahmedabad',
         postCount,
@@ -46,7 +49,13 @@ exports.getProfile = async (req, res) => {
         ...profileData,
         name: user.name || 'User',
         mobile: user.mobile,
+        phone: user.phone,
+        profilePhoto: user.profilePhoto ? `/uploads/profilePhotos/${user.profilePhoto}` : null,
         address: user.address,
+        state: user.state,
+        city: user.city,
+        pincode: user.pincode,
+        fullAddress: user.fullAddress,
         designation: user.designation
       };
     }
@@ -129,7 +138,7 @@ exports.editProfile = async (req, res) => {
       }
     }
     
-    const { trustName, adminName, name, mobile, darpanId, designation, address, email } = requestBody;
+    const { trustName, adminName, name, mobile, phone, darpanId, designation, address, state, city, pincode, fullAddress, email } = requestBody;
 
     // Check if user exists
     const user = await User.findById(userId);
@@ -158,8 +167,13 @@ exports.editProfile = async (req, res) => {
       // Regular users can edit basic profile fields
       if (name !== undefined) updateFields.name = name;
       if (mobile !== undefined) updateFields.mobile = mobile;
+      if (phone !== undefined) updateFields.phone = phone;
       if (designation !== undefined) updateFields.designation = designation;
       if (address !== undefined) updateFields.address = address;
+      if (state !== undefined) updateFields.state = state;
+      if (city !== undefined) updateFields.city = city;
+      if (pincode !== undefined) updateFields.pincode = pincode;
+      if (fullAddress !== undefined) updateFields.fullAddress = fullAddress;
       if (email !== undefined) updateFields.email = email;
       
       // Users cannot edit trust-specific fields
@@ -168,6 +182,18 @@ exports.editProfile = async (req, res) => {
           message: 'Invalid field for User role. trustName, adminName and darpanId are only for Trust accounts.' 
         });
       }
+    }
+
+    // Handle profile photo upload if file is provided
+    if (req.file) {
+      // Delete old profile photo if exists
+      if (user.profilePhoto) {
+        const oldPhotoPath = path.join(__dirname, '../uploads/profilePhotos', user.profilePhoto);
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+        }
+      }
+      updateFields.profilePhoto = req.file.filename;
     }
 
     // Check if updateFields is empty
@@ -182,11 +208,17 @@ exports.editProfile = async (req, res) => {
       userId,
       updateFields,
       { new: true, runValidators: true }
-    ).select('trustName adminName name mobile darpanId designation address email role createdAt');
+    ).select('trustName adminName name mobile phone darpanId profilePhoto designation address state city pincode fullAddress email role createdAt');
+
+    // Prepare response with profile photo URL
+    const responseUser = {
+      ...updatedUser.toObject(),
+      profilePhoto: updatedUser.profilePhoto ? `/uploads/profilePhotos/${updatedUser.profilePhoto}` : null
+    };
 
     res.json({
       message: 'Profile updated successfully',
-      user: updatedUser
+      user: responseUser
     });
   } catch (error) {
     console.error(error);
@@ -199,3 +231,4 @@ exports.editProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
