@@ -9,17 +9,20 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: 'Name and location are required' });
     }
 
-    // Handle multiple images (max 5)
+    // Accept any number of images (supports multer .array or .any)
     let pictures = [];
     if (req.files && req.files.length > 0) {
       pictures = req.files.map(file => `/uploads/posts/${file.filename}`);
+    } else if (req.file) {
+      pictures = [`/uploads/posts/${req.file.filename}`];
     }
 
     const newPost = await Post.create({
       name,
       location,
-      pictures,  // store array of images
-      createdBy: req.user.id // assuming JWT middleware adds `req.user`
+      pictures,                // array of images (can be empty)
+      picture: pictures[0] || null, // keep first image in `picture` if you use it elsewhere
+      createdBy: req.user.id
     });
 
     res.status(201).json({

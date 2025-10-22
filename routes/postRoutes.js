@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const postController = require('../controllers/postController');
-const upload = require('../middlewares/uploadPost'); // multer config
-const auth = require('../middlewares/auth'); // JWT auth
+const auth = require('../middlewares/auth');
+const upload = require('../middlewares/uploadPostImages'); // multer instance
 
-// Create post
-router.post('/post', auth, upload.single('picture'), postController.createPost);
+// Create post with any number of images
+router.post('/posts', auth, upload.array('images'), postController.createPost);
 router.get('/posts', auth, postController.getPosts);
 router.post('/post/like', auth, postController.likePost);
 router.post('/post/unlike', auth, postController.unlikePost);
