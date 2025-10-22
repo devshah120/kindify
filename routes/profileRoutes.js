@@ -11,6 +11,6 @@ router.get('/profile/:userId', auth, profileController.getProfile);
 router.get('/profile/:userId/posts', auth, profileController.getProfilePosts);
 
 // Edit profile (requires login and ownership) - supports profile photo upload
-router.put('/profile/:userId', auth, uploadProfilePhoto, profileController.editProfile);
+router.post('/profile/:userId', auth, uploadProfilePhoto, profileController.editProfile);
 
 module.exports = router;
