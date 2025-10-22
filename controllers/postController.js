@@ -20,8 +20,7 @@ exports.createPost = async (req, res) => {
     const newPost = await Post.create({
       name,
       location,
-      pictures,                // array of images (can be empty)
-      picture: pictures[0] || null, // keep first image in `picture` if you use it elsewhere
+      pictures,                // array of images (single field now)
       createdBy: req.user.id
     });
 
@@ -55,7 +54,7 @@ exports.getPosts = async (req, res) => {
     }
 
     const posts = await Post.find(filter)
-      .select('name location picture pictures likedBy savedBy createdBy createdAt')
+      .select('name location pictures likedBy savedBy createdBy createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -70,10 +69,9 @@ exports.getPosts = async (req, res) => {
       
       return {
         _id: post._id,
-        name: creatorName, // Show creator's name instead of post title
-        postTitle: post.name, // Keep original post title in separate field
+        name: creatorName,
+        postTitle: post.name,
         location: post.location,
-        picture: post.picture,
         pictures: post.pictures,
         createdBy: {
           id: post.createdBy._id,
@@ -82,8 +80,8 @@ exports.getPosts = async (req, res) => {
           role: post.createdBy.role
         },
         createdAt: post.createdAt,
-        likedBy: post.likedBy,             // Array of users who liked
-        savedBy: post.savedBy,             // Array of users who saved
+        likedBy: post.likedBy,
+        savedBy: post.savedBy,
         totalLikes: post.likedBy.length,
         totalSaves: post.savedBy.length
       };

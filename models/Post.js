@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema({
   name: String,
   location: String,
-  picture: { type: String, default: null },      // first image or preview
-  pictures: [{ type: String }],                   // array of image paths
+  pictures: [{ type: String }],                   // array of image paths (single source)
   likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
