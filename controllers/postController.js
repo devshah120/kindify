@@ -105,7 +105,12 @@ exports.getPosts = async (req, res) => {
 // Like a Post
 exports.likePost = async (req, res) => {
   try {
-    const { postId, userId } = req.body;
+    const { postId } = req.body;
+    const userId = req.user.id; // Get from authenticated user
+
+    if (!postId) {
+      return res.status(400).json({ message: 'Post ID is required' });
+    }
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: 'Post not found' });
@@ -125,7 +130,12 @@ exports.likePost = async (req, res) => {
 // Unlike a Post
 exports.unlikePost = async (req, res) => {
   try {
-    const { postId, userId } = req.body;
+    const { postId } = req.body;
+    const userId = req.user.id; // Get from authenticated user
+
+    if (!postId) {
+      return res.status(400).json({ message: 'Post ID is required' });
+    }
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: 'Post not found' });
@@ -143,7 +153,12 @@ exports.unlikePost = async (req, res) => {
 // Save a Post
 exports.savePost = async (req, res) => {
   try {
-    const { postId, userId } = req.body;
+    const { postId } = req.body;
+    const userId = req.user.id; // Get from authenticated user
+
+    if (!postId) {
+      return res.status(400).json({ message: 'Post ID is required' });
+    }
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: 'Post not found' });
@@ -163,7 +178,12 @@ exports.savePost = async (req, res) => {
 // Unsave a Post
 exports.unsavePost = async (req, res) => {
   try {
-    const { postId, userId } = req.body;
+    const { postId } = req.body;
+    const userId = req.user.id; // Get from authenticated user
+
+    if (!postId) {
+      return res.status(400).json({ message: 'Post ID is required' });
+    }
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: 'Post not found' });
