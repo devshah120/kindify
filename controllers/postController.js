@@ -176,3 +176,63 @@ exports.unsavePost = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+// Get Saved Posts by User
+exports.getSavedPosts = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from authenticated user
+
+    let { page = 1, limit = 10 } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const skip = (page - 1) * limit;
+
+    // Find all posts where the user's ID is in the savedBy array
+    const savedPosts = await Post.find({ savedBy: userId })
+      .select('name location pictures likedBy savedBy createdBy createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('createdBy', 'trustName adminName name email role')
+      .populate('likedBy', 'id name')
+      .populate('savedBy', 'id name');
+
+    const totalSavedPosts = await Post.countDocuments({ savedBy: userId });
+
+    const postsWithCounts = savedPosts.map(post => {
+      const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
+      
+      return {
+        _id: post._id,
+        name: creatorName,
+        postTitle: post.name,
+        location: post.location,
+        pictures: post.pictures,
+        createdBy: {
+          id: post.createdBy._id,
+          name: creatorName,
+          email: post.createdBy.email,
+          role: post.createdBy.role
+        },
+        createdAt: post.createdAt,
+        likedBy: post.likedBy,
+        savedBy: post.savedBy,
+        totalLikes: post.likedBy.length,
+        totalSaves: post.savedBy.length
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalSavedPosts / limit),
+      totalSavedPosts,
+      posts: postsWithCounts
+    });
+
+  } catch (error) {
+    console.error('Error fetching saved posts:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

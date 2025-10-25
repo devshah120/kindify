@@ -7,6 +7,7 @@ const upload = require('../middlewares/uploadPostImages'); // multer instance
 // Create post with any number of images
 router.post('/posts', auth, upload.array('images'), postController.createPost);
 router.get('/posts', auth, postController.getPosts);
+router.get('/posts/saved', auth, postController.getSavedPosts);
 router.post('/post/like', auth, postController.likePost);
 router.post('/post/unlike', auth, postController.unlikePost);
 router.post('/post/save', auth, postController.savePost);
