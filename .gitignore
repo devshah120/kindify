@@ -1,0 +1,16 @@
+node_modules/
+.env
+.DS_Store
+*.log
+
+# Keep directory structure but ignore uploaded files in production
+# (Use cloud storage like Cloudinary or AWS S3 for production)
+uploads/posts/*
+uploads/stories/*
+uploads/profilePhotos/*
+
+# Keep .gitkeep files to preserve directory structure
+!uploads/posts/.gitkeep
+!uploads/stories/.gitkeep
+!uploads/profilePhotos/.gitkeep
+
