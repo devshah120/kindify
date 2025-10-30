@@ -1,0 +1,192 @@
+const DistributionRequest = require('../models/DistributionRequest');
+const fs = require('fs');
+const path = require('path');
+
+// Create a new distribution request
+exports.createDistributionRequest = async (req, res) => {
+  try {
+    const {
+      userId,
+      date,
+      categoryId,
+      trustName,
+      phone,
+      email,
+      streetName,
+      state,
+      city,
+      pinCode,
+      requiredItem
+    } = req.body;
+
+    // Check if proof image was uploaded
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Proof image is required' 
+      });
+    }
+
+    const distributionRequest = new DistributionRequest({
+      userId,
+      date,
+      categoryId,
+      trustName,
+      phone,
+      email,
+      address: {
+        streetName,
+        state,
+        city,
+        pinCode
+      },
+      proofImage: req.file.path,
+      requiredItem
+    });
+
+    await distributionRequest.save();
+    
+    // Populate category and user details
+    await distributionRequest.populate('categoryId', 'name');
+    await distributionRequest.populate('userId', 'name email');
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Distribution request created successfully',
+      data: distributionRequest 
+    });
+  } catch (err) {
+    // Delete uploaded file if request fails
+    if (req.file) {
+      fs.unlink(req.file.path, (unlinkErr) => {
+        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      });
+    }
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// Get all distribution requests
+exports.getAllDistributionRequests = async (req, res) => {
+  try {
+    const { status, userId } = req.query;
+    const filter = {};
+    
+    if (status) filter.status = status;
+    if (userId) filter.userId = userId;
+
+    const requests = await DistributionRequest.find(filter)
+      .populate('categoryId', 'name')
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ 
+      success: true, 
+      count: requests.length,
+      data: requests 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Get distribution request by ID
+exports.getDistributionRequestById = async (req, res) => {
+  try {
+    const request = await DistributionRequest.findById(req.params.id)
+      .populate('categoryId', 'name')
+      .populate('userId', 'name email phone');
+
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Distribution request not found' 
+      });
+    }
+
+    res.status(200).json({ success: true, data: request });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Update distribution request status
+exports.updateDistributionRequest = async (req, res) => {
+  try {
+    const { status, remarks } = req.body;
+    
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (remarks) updateData.remarks = remarks;
+
+    const request = await DistributionRequest.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    ).populate('categoryId', 'name')
+     .populate('userId', 'name email phone');
+
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Distribution request not found' 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Distribution request updated successfully',
+      data: request 
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// Delete distribution request
+exports.deleteDistributionRequest = async (req, res) => {
+  try {
+    const request = await DistributionRequest.findById(req.params.id);
+    
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Distribution request not found' 
+      });
+    }
+
+    // Delete the proof image file
+    if (request.proofImage && fs.existsSync(request.proofImage)) {
+      fs.unlink(request.proofImage, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+    }
+
+    await DistributionRequest.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Distribution request deleted successfully' 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Get requests by user
+exports.getUserDistributionRequests = async (req, res) => {
+  try {
+    const requests = await DistributionRequest.find({ userId: req.params.userId })
+      .populate('categoryId', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ 
+      success: true, 
+      count: requests.length,
+      data: requests 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
