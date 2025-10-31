@@ -27,9 +27,9 @@ exports.createDistributionRequest = async (req, res) => {
       });
     }
 
-    const distributionRequest = new DistributionRequest({
+    // Prepare request data - date is optional
+    const requestData = {
       userId,
-      date,
       categoryId,
       trustName,
       phone,
@@ -42,7 +42,14 @@ exports.createDistributionRequest = async (req, res) => {
       },
       proofImage: req.file.path,
       requiredItem
-    });
+    };
+
+    // Only include date if it's provided and valid (date is optional)
+    if (date && String(date).trim() !== '') {
+      requestData.date = date;
+    }
+
+    const distributionRequest = new DistributionRequest(requestData);
 
     await distributionRequest.save();
     

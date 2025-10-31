@@ -8,7 +8,7 @@ const distributionRequestSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-    required: true
+    required: false
   },
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
