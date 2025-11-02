@@ -2,12 +2,12 @@ const Story = require('../models/Story');
 
 exports.createStory = async (req, res) => {
   try {
-    const { title, location, isUserStory } = req.body;
+    const { title, isUserStory } = req.body;
     const imageUrl = req.file ? `/uploads/stories/${req.file.filename}` : null;
 
-    // Ensure title and location are provided
-    if (!title || !location) {
-      return res.status(400).json({ message: 'Title and location are required' });
+    // Ensure title is provided
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required' });
     }
 
     // Ensure createdBy field (authentication)
@@ -18,7 +18,6 @@ exports.createStory = async (req, res) => {
     // Create the new story
     const newStory = new Story({
       title,
-      location,
       imageUrl,
       isUserStory: isUserStory || false, // default to false
       createdBy: req.user.id, // Set the creator based on authenticated user
@@ -46,7 +45,7 @@ exports.getStories = async (req, res) => {
   try {
     // Fetch all stories without any pagination or filtering
     const stories = await Story.find({})
-      .select('id title location imageUrl isUserStory createdBy createdAt') // Include createdBy field
+      .select('id title imageUrl isUserStory createdBy createdAt') // Include createdBy field
       .populate('createdBy', 'username email') // Populating the `createdBy` field with user data (you can change this to other user fields as necessary)
       .sort({ createdAt: -1 }); // Sort by creation date, most recent first
 

@@ -10,3 +10,18 @@ exports.joinVolunteer = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error." });
     }
 };
+
+exports.getVolunteers = async (req, res) => {
+    try {
+        const volunteers = await Volunteer.find({})
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            volunteers
+        });
+    } catch (error) {
+        console.error('Error fetching volunteers:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};

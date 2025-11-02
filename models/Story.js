@@ -6,10 +6,6 @@ const storySchema = new Schema({
     type: String,
     required: true
   },
-  location: {
-    type: String,
-    required: true
-  },
   imageUrl: {
     type: String,
     required: true
