@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema({
   name: String,
   location: String,
-  pictures: [{ type: String }],                   // array of image paths (single source)
+  pictures: [{ type: String }],                   // array of Cloudinary URLs
   likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

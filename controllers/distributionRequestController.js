@@ -1,6 +1,5 @@
 const DistributionRequest = require('../models/DistributionRequest');
-const fs = require('fs');
-const path = require('path');
+const { deleteFromCloudinary } = require('../config/cloudinary');
 
 // Create a new distribution request
 exports.createDistributionRequest = async (req, res) => {
@@ -40,7 +39,7 @@ exports.createDistributionRequest = async (req, res) => {
         city,
         pinCode
       },
-      proofImage: req.file.path,
+      proofImage: req.file.path, // Cloudinary URL
       requiredItem
     };
 
@@ -63,11 +62,9 @@ exports.createDistributionRequest = async (req, res) => {
       data: distributionRequest 
     });
   } catch (err) {
-    // Delete uploaded file if request fails
-    if (req.file) {
-      fs.unlink(req.file.path, (unlinkErr) => {
-        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
-      });
+    // Delete uploaded file from Cloudinary if request fails
+    if (req.file && req.file.path) {
+      await deleteFromCloudinary(req.file.path);
     }
     res.status(400).json({ success: false, error: err.message });
   }
@@ -162,11 +159,9 @@ exports.deleteDistributionRequest = async (req, res) => {
       });
     }
 
-    // Delete the proof image file
-    if (request.proofImage && fs.existsSync(request.proofImage)) {
-      fs.unlink(request.proofImage, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
+    // Delete the proof image from Cloudinary
+    if (request.proofImage) {
+      await deleteFromCloudinary(request.proofImage);
     }
 
     await DistributionRequest.findByIdAndDelete(req.params.id);

@@ -147,7 +147,7 @@ exports.registerTrust = async (req, res) => {
     mobile,
     email,
     darpanId,
-    darpanCertificate: req.file.filename, // store file name
+    darpanCertificate: req.file.path, // store Cloudinary URL
     role: 'Trust'
   });
 

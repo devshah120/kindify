@@ -1,23 +1,8 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { createCloudinaryStorage } = require('../config/cloudinary');
 
-// Ensure posts upload folder exists
-const uploadDir = path.join(__dirname, '../uploads/posts');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-    cb(null, fileName);
-  }
-});
+// Create Cloudinary storage for posts
+const storage = createCloudinaryStorage('kindify/posts', ['jpg', 'jpeg', 'png']);
 
 // Allow only JPG & PNG for posts
 const fileFilter = (req, file, cb) => {

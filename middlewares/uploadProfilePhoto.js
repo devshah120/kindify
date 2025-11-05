@@ -1,25 +1,8 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { createCloudinaryStorage } = require('../config/cloudinary');
 
-// Ensure uploads/profilePhotos directory exists
-const uploadDir = path.join(__dirname, '../uploads/profilePhotos');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer for profile photo uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    cb(null, 'profile-' + uniqueSuffix + extension);
-  }
-});
+// Create Cloudinary storage for profile photos
+const storage = createCloudinaryStorage('kindify/profile-photos', ['jpg', 'jpeg', 'png', 'webp']);
 
 // File filter to only allow images
 const fileFilter = (req, file, cb) => {

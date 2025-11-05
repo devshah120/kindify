@@ -1,23 +1,8 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { createCloudinaryStorage } = require('./cloudinary');
 
-// Ensure upload folder exists
-const uploadDir = path.join(__dirname, '../uploads/darpanCertificates');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-    cb(null, fileName);
-  }
-});
+// Create Cloudinary storage for darpan certificates
+const storage = createCloudinaryStorage('kindify/darpan-certificates', ['pdf', 'jpg', 'jpeg', 'png']);
 
 // Only allow PDF, JPG, PNG
 const fileFilter = (req, file, cb) => {

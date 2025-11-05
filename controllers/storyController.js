@@ -3,7 +3,7 @@ const Story = require('../models/Story');
 exports.createStory = async (req, res) => {
   try {
     const { title, isUserStory } = req.body;
-    const imageUrl = req.file ? `/uploads/stories/${req.file.filename}` : null;
+    const imageUrl = req.file ? req.file.path : null; // Cloudinary URL
 
     // Ensure title is provided
     if (!title) {

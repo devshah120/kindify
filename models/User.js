@@ -7,8 +7,8 @@ const userSchema = new mongoose.Schema({
   mobile: { type: String, required: false },
   phone: { type: String, required: false }, // Additional phone field
   darpanId: String,
-  darpanCertificate: String, // store file name
-  profilePhoto: { type: String, required: false }, // Profile photo filename
+  darpanCertificate: String, // Cloudinary URL
+  profilePhoto: { type: String, required: false }, // Cloudinary URL
   designation: { type: String , required: false},               // Food Donator
   address: { type: String, required: false },
   state: { type: String, required: false },

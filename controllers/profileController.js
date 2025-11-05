@@ -2,8 +2,7 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const Support = require('../models/Support');
 const Supporter = require('../models/Supporter');
-const fs = require('fs');
-const path = require('path');
+const { deleteFromCloudinary } = require('../config/cloudinary');
 
 exports.getProfile = async (req, res) => {
   try {
@@ -36,7 +35,7 @@ exports.getProfile = async (req, res) => {
         adminName: user.adminName,
         mobile: user.mobile,
         darpanId: user.darpanId,
-        profilePhoto: user.profilePhoto ? `/uploads/profilePhotos/${user.profilePhoto}` : null,
+        profilePhoto: user.profilePhoto || null,
         designation: user.designation || 'Food Donator',
         address: user.address || 'Ahmedabad',
         postCount,
@@ -50,7 +49,7 @@ exports.getProfile = async (req, res) => {
         name: user.name || 'User',
         mobile: user.mobile,
         phone: user.phone,
-        profilePhoto: user.profilePhoto ? `/uploads/profilePhotos/${user.profilePhoto}` : null,
+        profilePhoto: user.profilePhoto || null,
         address: user.address,
         state: user.state,
         city: user.city,
@@ -186,14 +185,11 @@ exports.editProfile = async (req, res) => {
 
     // Handle profile photo upload if file is provided
     if (req.file) {
-      // Delete old profile photo if exists
+      // Delete old profile photo from Cloudinary if exists
       if (user.profilePhoto) {
-        const oldPhotoPath = path.join(__dirname, '../uploads/profilePhotos', user.profilePhoto);
-        if (fs.existsSync(oldPhotoPath)) {
-          fs.unlinkSync(oldPhotoPath);
-        }
+        await deleteFromCloudinary(user.profilePhoto);
       }
-      updateFields.profilePhoto = req.file.filename;
+      updateFields.profilePhoto = req.file.path; // Cloudinary URL
     }
 
     // Check if updateFields is empty
@@ -213,7 +209,7 @@ exports.editProfile = async (req, res) => {
     // Prepare response with profile photo URL
     const responseUser = {
       ...updatedUser.toObject(),
-      profilePhoto: updatedUser.profilePhoto ? `/uploads/profilePhotos/${updatedUser.profilePhoto}` : null
+      profilePhoto: updatedUser.profilePhoto || null
     };
 
     res.json({

@@ -12,9 +12,9 @@ exports.createPost = async (req, res) => {
     // Accept any number of images (supports multer .array or .any)
     let pictures = [];
     if (req.files && req.files.length > 0) {
-      pictures = req.files.map(file => `/uploads/posts/${file.filename}`);
+      pictures = req.files.map(file => file.path); // Cloudinary URL
     } else if (req.file) {
-      pictures = [`/uploads/posts/${req.file.filename}`];
+      pictures = [req.file.path]; // Cloudinary URL
     }
 
     const newPost = await Post.create({
