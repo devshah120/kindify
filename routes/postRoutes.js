@@ -1,21 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const uploadPostImages = require('../middlewares/uploadPostImages'); // Import the upload middleware
+const auth = require('../middlewares/auth'); // JWT auth
 const postController = require('../controllers/postController');
-const auth = require('../middlewares/auth');
-const upload = require('../middlewares/uploadPostImages'); // multer instance
 
 // Multer error handling middleware
 const handleMulterError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({ error: 'Too many files uploaded' });
+      return res.status(400).json({ error: 'Too many files uploaded. Maximum 10 files allowed.' });
     }
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large' });
+      return res.status(400).json({ error: 'File too large. Maximum 10MB per file.' });
     }
     if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-      return res.status(400).json({ error: 'Unexpected file field' });
+      return res.status(400).json({ error: `Unexpected file field: ${err.field}. Use field name 'images' for multiple files.` });
     }
     return res.status(400).json({ error: err.message });
   }
@@ -25,8 +25,8 @@ const handleMulterError = (err, req, res, next) => {
   next();
 };
 
-// Create post with any number of images
-router.post('/posts', auth, upload.array('images', 10), handleMulterError, postController.createPost);
+// Create a new post with multiple image uploads (similar to story but supports multiple images)
+router.post('/posts', auth, uploadPostImages.array('images', 10), handleMulterError, postController.createPost);
 router.get('/posts', auth, postController.getPosts);
 router.get('/posts/saved', auth, postController.getSavedPosts);
 router.post('/post/like', auth, postController.likePost);

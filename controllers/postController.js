@@ -9,12 +9,12 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: 'Name and location are required' });
     }
 
-    // Accept any number of images (supports multer .array)
+    // Get images from multer (similar to story but supports multiple images)
     let pictures = [];
     if (req.files && req.files.length > 0) {
       pictures = req.files.map(file => file.path); // Cloudinary URL
     } else if (req.file) {
-      pictures = [req.file.path]; // Cloudinary URL
+      pictures = [req.file.path]; // Cloudinary URL (fallback for single file)
     }
 
     if (pictures.length === 0) {
