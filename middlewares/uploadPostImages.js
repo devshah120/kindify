@@ -9,8 +9,15 @@ const fileFilter = (req, file, cb) => {
   const ext = allowed.test(file.originalname.toLowerCase());
   const mime = allowed.test(file.mimetype);
   if (ext && mime) cb(null, true);
-  else cb(new Error('Only images allowed'));
+  else cb(new Error('Only images allowed (jpg, jpeg, png, webp)'));
 };
 
-// no fixed file count; you can set limits.files if desired
-module.exports = multer({ storage, fileFilter /*, limits: { files: 50 } */ });
+// Configure multer with limits for multiple file uploads
+module.exports = multer({ 
+  storage, 
+  fileFilter,
+  limits: { 
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 10 // Maximum 10 files
+  }
+});

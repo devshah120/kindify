@@ -9,7 +9,7 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: 'Name and location are required' });
     }
 
-    // Accept any number of images (supports multer .array or .any)
+    // Accept any number of images (supports multer .array)
     let pictures = [];
     if (req.files && req.files.length > 0) {
       pictures = req.files.map(file => file.path); // Cloudinary URL
@@ -17,10 +17,14 @@ exports.createPost = async (req, res) => {
       pictures = [req.file.path]; // Cloudinary URL
     }
 
+    if (pictures.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
+    }
+
     const newPost = await Post.create({
       name,
       location,
-      pictures,                // array of images (single field now)
+      pictures,                // array of images
       createdBy: req.user.id
     });
 
@@ -30,7 +34,7 @@ exports.createPost = async (req, res) => {
     });
   } catch (err) {
     console.error('Create Post Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to create post' });
   }
 };
 
