@@ -46,18 +46,43 @@ exports.getStories = async (req, res) => {
   try {
     // Fetch all stories without any pagination or filtering
     const stories = await Story.find({})
-      .select('id title imageUrl isUserStory createdBy createdAt') // Include createdBy field
-      .populate('createdBy', 'username email') // Populating the `createdBy` field with user data (you can change this to other user fields as necessary)
+      .select('_id title imageUrl isUserStory createdBy createdAt')
+      .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .sort({ createdAt: -1 }); // Sort by creation date, most recent first
+
+    // Format stories with user info
+    const formattedStories = stories.map(story => {
+      const creator = story.createdBy;
+      const creatorName = creator?.role === 'Trust' ? creator.trustName : creator?.name || 'Unknown';
+      
+      return {
+        _id: story._id,
+        title: story.title,
+        imageUrl: story.imageUrl,
+        isUserStory: story.isUserStory,
+        createdBy: creator ? {
+          _id: creator._id,
+          name: creatorName,
+          email: creator.email,
+          role: creator.role,
+          profilePhoto: creator.profilePhoto || null
+        } : null,
+        createdAt: story.createdAt
+      };
+    });
 
     res.status(200).json({
       success: true,
-      stories
+      stories: formattedStories
     });
 
   } catch (error) {
     console.error('Error fetching stories:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
   }
 };
 

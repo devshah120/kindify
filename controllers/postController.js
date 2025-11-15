@@ -67,8 +67,8 @@ exports.getPosts = async (req, res) => {
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role')  // Populate creator info
       .populate('categoryId', 'name icon')  // Populate category info
-      .populate('likedBy', 'id name')   // Populate likedBy user info
-      .populate('savedBy', 'id name');  // Populate savedBy user info
+      .populate('likedBy', '_id name trustName adminName')   // Populate likedBy user info
+      .populate('savedBy', '_id name trustName adminName');  // Populate savedBy user info
 
     const totalPosts = await Post.countDocuments(filter);
 
@@ -134,7 +134,11 @@ exports.getPosts = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching posts:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -253,8 +257,8 @@ exports.getSavedPosts = async (req, res) => {
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role')
       .populate('categoryId', 'name icon')
-      .populate('likedBy', 'id name')
-      .populate('savedBy', 'id name');
+      .populate('likedBy', '_id name trustName adminName')
+      .populate('savedBy', '_id name trustName adminName');
 
     const totalSavedPosts = await Post.countDocuments({ savedBy: userId });
 
@@ -319,7 +323,11 @@ exports.getSavedPosts = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching saved posts:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
