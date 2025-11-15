@@ -1,10 +1,11 @@
 const Post = require('../models/Post');
 const { deleteFromCloudinary } = require('../config/cloudinary');
+const Supporter = require('../models/Supporter');
 
 // Create Post
 exports.createPost = async (req, res) => {
   try {
-    const { name, location } = req.body;
+    const { name, location, categoryId } = req.body;
 
     if (!name || !location) {
       return res.status(400).json({ message: 'Name and location are required' });
@@ -26,6 +27,7 @@ exports.createPost = async (req, res) => {
       name,
       location,
       pictures,                // array of images
+      categoryId: categoryId || null,  // category ID (optional)
       createdBy: req.user.id
     });
 
@@ -59,18 +61,41 @@ exports.getPosts = async (req, res) => {
     }
 
     const posts = await Post.find(filter)
-      .select('name location pictures likedBy savedBy createdBy createdAt')
+      .select('name location pictures categoryId likedBy savedBy createdBy createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role')  // Populate creator info
+      .populate('categoryId', 'name icon')  // Populate category info
       .populate('likedBy', 'id name')   // Populate likedBy user info
       .populate('savedBy', 'id name');  // Populate savedBy user info
 
     const totalPosts = await Post.countDocuments(filter);
 
+    // Get support relationships for current user (if authenticated)
+    const userId = req.user?.id;
+    let supportMap = {};
+    if (userId && posts.length > 0) {
+      const creatorIds = posts
+        .filter(post => post.createdBy && post.createdBy._id)
+        .map(post => post.createdBy._id.toString());
+      
+      if (creatorIds.length > 0) {
+        const supports = await Supporter.find({ 
+          userId: userId, 
+          trustId: { $in: creatorIds } 
+        });
+        supports.forEach(support => {
+          supportMap[support.trustId.toString()] = support._id.toString();
+        });
+      }
+    }
+
     const postsWithCounts = posts.map(post => {
       const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
+      const creatorId = post.createdBy._id.toString();
+      const supportId = userId ? supportMap[creatorId] || null : null;
+      const isSupporting = !!supportId;  // Boolean: true if current user is supporting the creator
       
       return {
         _id: post._id,
@@ -78,12 +103,19 @@ exports.getPosts = async (req, res) => {
         postTitle: post.name,
         location: post.location,
         pictures: post.pictures,
+        categoryId: post.categoryId ? {
+          _id: post.categoryId._id,
+          name: post.categoryId.name,
+          icon: post.categoryId.icon
+        } : null,
         createdBy: {
           id: post.createdBy._id,
           name: creatorName,
           email: post.createdBy.email,
           role: post.createdBy.role
         },
+        supportId: supportId,  // Supporter document ID (for unsupport operation), null if not supporting
+        isSupporting: isSupporting,  // Boolean: true if current user is supporting this creator
         createdAt: post.createdAt,
         likedBy: post.likedBy,
         savedBy: post.savedBy,
@@ -215,18 +247,40 @@ exports.getSavedPosts = async (req, res) => {
 
     // Find all posts where the user's ID is in the savedBy array
     const savedPosts = await Post.find({ savedBy: userId })
-      .select('name location pictures likedBy savedBy createdBy createdAt')
+      .select('name location pictures categoryId likedBy savedBy createdBy createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role')
+      .populate('categoryId', 'name icon')
       .populate('likedBy', 'id name')
       .populate('savedBy', 'id name');
 
     const totalSavedPosts = await Post.countDocuments({ savedBy: userId });
 
+    // Get support relationships for current user
+    let supportMap = {};
+    if (savedPosts.length > 0) {
+      const creatorIds = savedPosts
+        .filter(post => post.createdBy && post.createdBy._id)
+        .map(post => post.createdBy._id.toString());
+      
+      if (creatorIds.length > 0) {
+        const supports = await Supporter.find({ 
+          userId: userId, 
+          trustId: { $in: creatorIds } 
+        });
+        supports.forEach(support => {
+          supportMap[support.trustId.toString()] = support._id.toString();
+        });
+      }
+    }
+
     const postsWithCounts = savedPosts.map(post => {
       const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
+      const creatorId = post.createdBy._id.toString();
+      const supportId = supportMap[creatorId] || null;
+      const isSupporting = !!supportId;  // Boolean: true if current user is supporting the creator
       
       return {
         _id: post._id,
@@ -234,12 +288,19 @@ exports.getSavedPosts = async (req, res) => {
         postTitle: post.name,
         location: post.location,
         pictures: post.pictures,
+        categoryId: post.categoryId ? {
+          _id: post.categoryId._id,
+          name: post.categoryId.name,
+          icon: post.categoryId.icon
+        } : null,
         createdBy: {
           id: post.createdBy._id,
           name: creatorName,
           email: post.createdBy.email,
           role: post.createdBy.role
         },
+        supportId: supportId,  // Supporter document ID (for unsupport operation), null if not supporting
+        isSupporting: isSupporting,  // Boolean: true if current user is supporting this creator
         createdAt: post.createdAt,
         likedBy: post.likedBy,
         savedBy: post.savedBy,
