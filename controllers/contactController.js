@@ -25,3 +25,28 @@ exports.getContacts = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
+
+exports.getContactsByTrust = async (req, res) => {
+    try {
+        const { trustId } = req.params;
+
+        if (!trustId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Trust ID is required' 
+            });
+        }
+
+        const contacts = await Contact.find({ trust: trustId })
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: contacts.length,
+            contacts
+        });
+    } catch (error) {
+        console.error('Error fetching contacts by trust:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
