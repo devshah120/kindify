@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const fs = require('fs');
 const path = require('path'); 
 const authRoutes = require('./routes/authRoutes');
@@ -15,7 +16,17 @@ const DonationRoutes = require('./routes/donationRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const distributionRequestRoutes = require('./routes/distributionRequestRoutes');
 const app = express();
+
+// CORS configuration - Allow all origins from everywhere
+app.use(cors({
+  origin: true, // Allow all origins (works with credentials)
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Authorization']
+}));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
