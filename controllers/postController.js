@@ -1,4 +1,5 @@
 const Post = require('../models/Post');
+const { deleteFromCloudinary } = require('../config/cloudinary');
 
 // Create Post
 exports.createPost = async (req, res) => {
@@ -258,5 +259,38 @@ exports.getSavedPosts = async (req, res) => {
   } catch (error) {
     console.error('Error fetching saved posts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Delete post
+exports.deletePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    
+    if (!post) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Post not found' 
+      });
+    }
+
+    // Delete all images from Cloudinary
+    if (post.pictures && post.pictures.length > 0) {
+      for (const pictureUrl of post.pictures) {
+        if (pictureUrl) {
+          await deleteFromCloudinary(pictureUrl);
+        }
+      }
+    }
+
+    await Post.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Post deleted successfully' 
+    });
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
