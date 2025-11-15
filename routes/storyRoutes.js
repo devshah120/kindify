@@ -10,4 +10,7 @@ router.post('/stories',auth, uploadStory.single('imageUrl'), storyController.cre
 // Get all stories with pagination
 router.get('/stories',auth, storyController.getStories);
 
+// Delete story
+router.delete('/stories/:id', auth, storyController.deleteStory);
+
 module.exports = router;

@@ -1,4 +1,5 @@
 const Story = require('../models/Story');
+const { deleteFromCloudinary } = require('../config/cloudinary');
 
 exports.createStory = async (req, res) => {
   try {
@@ -57,5 +58,34 @@ exports.getStories = async (req, res) => {
   } catch (error) {
     console.error('Error fetching stories:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Delete story
+exports.deleteStory = async (req, res) => {
+  try {
+    const story = await Story.findById(req.params.id);
+    
+    if (!story) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Story not found' 
+      });
+    }
+
+    // Delete the image from Cloudinary
+    if (story.imageUrl) {
+      await deleteFromCloudinary(story.imageUrl);
+    }
+
+    await Story.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Story deleted successfully' 
+    });
+  } catch (err) {
+    console.error('Error deleting story:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
