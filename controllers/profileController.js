@@ -162,6 +162,10 @@ exports.editProfile = async (req, res) => {
       if (darpanId !== undefined) updateFields.darpanId = darpanId;
       if (designation !== undefined) updateFields.designation = designation;
       if (address !== undefined) updateFields.address = address;
+      if (state !== undefined) updateFields.state = state;
+      if (city !== undefined) updateFields.city = city;
+      if (pincode !== undefined) updateFields.pincode = pincode;
+      if (fullAddress !== undefined) updateFields.fullAddress = fullAddress;
     } else if (user.role === 'User') {
       // Regular users can edit basic profile fields
       if (name !== undefined) updateFields.name = name;
