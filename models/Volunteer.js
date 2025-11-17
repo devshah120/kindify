@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const volunteerSchema = new mongoose.Schema({
     fullName: { type: String, required: true },
     email: { type: String, required: true },
-    trust: { type: String, required: true }, // Trust ID
+    trust: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Trust ID as ObjectId reference
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Reference to User who requested
     availability: { type: Map, of: [String], required: true },
     options: [{ type: String }],

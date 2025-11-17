@@ -1,4 +1,5 @@
 const Contact = require('../models/Contact');
+const mongoose = require('mongoose');
 
 exports.submitContact = async (req, res) => {
     try {
@@ -34,6 +35,14 @@ exports.getContactsByTrust = async (req, res) => {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Trust ID is required' 
+            });
+        }
+
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(trustId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid Trust ID format' 
             });
         }
 

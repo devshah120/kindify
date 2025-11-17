@@ -1,4 +1,5 @@
 const Volunteer = require('../models/Volunteer');
+const mongoose = require('mongoose');
 
 exports.joinVolunteer = async (req, res) => {
     try {
@@ -47,6 +48,14 @@ exports.getVolunteersByTrust = async (req, res) => {
             });
         }
 
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(trustId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid Trust ID format' 
+            });
+        }
+
         let filter = { trust: trustId };
         if (status && ['pending', 'approved', 'rejected'].includes(status)) {
             filter.status = status;
@@ -58,6 +67,7 @@ exports.getVolunteersByTrust = async (req, res) => {
 
         const volunteersWithUserInfo = volunteers.map(volunteer => {
             const user = volunteer.userId;
+            const trust = volunteer.trust;
             return {
                 _id: volunteer._id,
                 fullName: volunteer.fullName,
@@ -120,7 +130,8 @@ exports.updateVolunteerStatus = async (req, res) => {
             volunteerId,
             updateData,
             { new: true, runValidators: true }
-        ).populate('userId', 'name email profilePhoto trustName adminName role phone mobile');
+        ).populate('trust', 'trustName adminName name email role')
+         .populate('userId', 'name email profilePhoto trustName adminName role phone mobile');
 
         if (!volunteer) {
             return res.status(404).json({ 
@@ -130,6 +141,7 @@ exports.updateVolunteerStatus = async (req, res) => {
         }
 
         const user = volunteer.userId;
+        const trust = volunteer.trust;
         const volunteerResponse = {
             _id: volunteer._id,
             fullName: volunteer.fullName,
