@@ -38,6 +38,10 @@ exports.getProfile = async (req, res) => {
         profilePhoto: user.profilePhoto || null,
         designation: user.designation || 'Food Donator',
         address: user.address || 'Ahmedabad',
+        state: user.state || null,
+        city: user.city || null,
+        pincode: user.pincode || null,
+        fullAddress: user.fullAddress || null,
         postCount,
         supporterCount,
         supportCount
