@@ -1,11 +1,10 @@
-const Supporter = require('../models/Supporter');
 const User = require('../models/User');
 
-// Support a user/trust (Follow)
+// Support a user/trust (Follow) - Same logic as save/unsave
 exports.supportUser = async (req, res) => {
   try {
-    const supporterId = req.user.id; // Logged-in user
     const { trustId } = req.body; // User/Trust to support
+    const userId = req.user.id; // Get from authenticated user
 
     if (!trustId) {
       return res.status(400).json({ message: 'Trust ID is required' });
@@ -18,21 +17,21 @@ exports.supportUser = async (req, res) => {
     }
 
     // Check if already supporting
-    const existingSupport = await Supporter.findOne({ trustId, userId: supporterId });
-    if (existingSupport) {
+    if (trustUser.supportedBy && trustUser.supportedBy.includes(userId)) {
       return res.status(400).json({ message: 'Already supporting this user/trust' });
     }
 
-    // Create new support relationship
-    const newSupporter = await Supporter.create({
-      trustId,
-      userId: supporterId
-    });
+    // Add supporter to the array
+    if (!trustUser.supportedBy) {
+      trustUser.supportedBy = [];
+    }
+    trustUser.supportedBy.push(userId);
+    await trustUser.save();
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: 'Successfully started supporting',
-      supporter: newSupporter
+      totalSupporters: trustUser.supportedBy.length
     });
 
   } catch (error) {
@@ -42,26 +41,34 @@ exports.supportUser = async (req, res) => {
 };
 
 
-// Unsupport a user/trust (Unfollow)
+// Unsupport a user/trust (Unfollow) - Same logic as unsave
 exports.unsupportUser = async (req, res) => {
   try {
-    const supporterId = req.user.id; // Logged-in user
     const { trustId } = req.body; // User/Trust to unsupport
+    const userId = req.user.id; // Get from authenticated user
 
     if (!trustId) {
       return res.status(400).json({ message: 'Trust ID is required' });
     }
 
-    // Remove support relationship
-    const result = await Supporter.findOneAndDelete({ trustId, userId: supporterId });
+    // Find the trust/user
+    const trustUser = await User.findById(trustId);
+    if (!trustUser) {
+      return res.status(404).json({ message: 'User/Trust not found' });
+    }
 
-    if (!result) {
+    // Remove supporter from the array
+    if (!trustUser.supportedBy || !trustUser.supportedBy.includes(userId)) {
       return res.status(404).json({ message: 'Support relationship not found' });
     }
 
+    trustUser.supportedBy = trustUser.supportedBy.filter(id => id.toString() !== userId);
+    await trustUser.save();
+
     res.status(200).json({
       success: true,
-      message: 'Successfully stopped supporting'
+      message: 'Successfully stopped supporting',
+      totalSupporters: trustUser.supportedBy.length
     });
 
   } catch (error) {
@@ -81,28 +88,26 @@ exports.getSupporting = async (req, res) => {
     limit = parseInt(limit);
     const skip = (page - 1) * limit;
 
-    // Find all users/trusts this user is supporting
-    const supporting = await Supporter.find({ userId })
-      .sort({ joinedAt: -1 })
+    // Find all users/trusts where this user's ID is in their supportedBy array
+    const supporting = await User.find({ supportedBy: userId })
+      .select('trustName adminName name email role profilePhoto designation city state createdAt')
+      .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .populate('trustId', 'trustName adminName name email role profilePhoto designation city state');
+      .limit(limit);
 
-    const totalSupporting = await Supporter.countDocuments({ userId });
+    const totalSupporting = await User.countDocuments({ supportedBy: userId });
 
-    const supportingList = supporting.map(support => ({
-      _id: support._id,
+    const supportingList = supporting.map(user => ({
       user: {
-        id: support.trustId._id,
-        name: support.trustId.role === 'Trust' ? support.trustId.trustName : support.trustId.name,
-        email: support.trustId.email,
-        role: support.trustId.role,
-        profilePhoto: support.trustId.profilePhoto,
-        designation: support.trustId.designation,
-        city: support.trustId.city,
-        state: support.trustId.state
-      },
-      joinedAt: support.joinedAt
+        id: user._id,
+        name: user.role === 'Trust' ? user.trustName : user.name,
+        email: user.email,
+        role: user.role,
+        profilePhoto: user.profilePhoto || null,
+        designation: user.designation || null,
+        city: user.city || null,
+        state: user.state || null
+      }
     }));
 
     res.status(200).json({
@@ -129,33 +134,39 @@ exports.getSupporters = async (req, res) => {
       return res.status(400).json({ message: 'Trust ID is required' });
     }
 
+    // Find the user/trust
+    const trustUser = await User.findById(trustId);
+    if (!trustUser) {
+      return res.status(404).json({ message: 'User/Trust not found' });
+    }
+
     let { page = 1, limit = 10 } = req.query;
     page = parseInt(page);
     limit = parseInt(limit);
     const skip = (page - 1) * limit;
 
-    // Find all supporters of this user/trust
-    const supporters = await Supporter.find({ trustId })
-      .sort({ joinedAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('userId', 'trustName adminName name email role profilePhoto designation city state');
+    // Get supporters from the supportedBy array
+    const supporterIds = trustUser.supportedBy || [];
+    const totalSupporters = supporterIds.length;
 
-    const totalSupporters = await Supporter.countDocuments({ trustId });
+    // Get paginated supporter IDs
+    const paginatedIds = supporterIds.slice(skip, skip + limit);
 
-    const supportersList = supporters.map(support => ({
-      _id: support._id,
+    // Populate supporter user details
+    const supporters = await User.find({ _id: { $in: paginatedIds } })
+      .select('trustName adminName name email role profilePhoto designation city state createdAt');
+
+    const supportersList = supporters.map(user => ({
       user: {
-        id: support.userId._id,
-        name: support.userId.role === 'Trust' ? support.userId.trustName : support.userId.name,
-        email: support.userId.email,
-        role: support.userId.role,
-        profilePhoto: support.userId.profilePhoto,
-        designation: support.userId.designation,
-        city: support.userId.city,
-        state: support.userId.state
-      },
-      joinedAt: support.joinedAt
+        id: user._id,
+        name: user.role === 'Trust' ? user.trustName : user.name,
+        email: user.email,
+        role: user.role,
+        profilePhoto: user.profilePhoto || null,
+        designation: user.designation || null,
+        city: user.city || null,
+        state: user.state || null
+      }
     }));
 
     res.status(200).json({
@@ -178,11 +189,12 @@ exports.getSupportStats = async (req, res) => {
   try {
     const userId = req.user.id; // Logged-in user
 
-    // Count how many users this user is supporting
-    const supportingCount = await Supporter.countDocuments({ userId });
+    // Count how many users this user is supporting (users where userId is in their supportedBy array)
+    const supportingCount = await User.countDocuments({ supportedBy: userId });
 
-    // Count how many supporters this user has
-    const supportersCount = await Supporter.countDocuments({ trustId: userId });
+    // Count how many supporters this user has (from their own supportedBy array)
+    const user = await User.findById(userId);
+    const supportersCount = user?.supportedBy?.length || 0;
 
     res.status(200).json({
       success: true,
@@ -209,7 +221,13 @@ exports.checkSupportStatus = async (req, res) => {
       return res.status(400).json({ message: 'Trust ID is required' });
     }
 
-    const isSupporting = await Supporter.findOne({ trustId, userId });
+    // Find the trust/user and check if userId is in their supportedBy array
+    const trustUser = await User.findById(trustId);
+    if (!trustUser) {
+      return res.status(404).json({ message: 'User/Trust not found' });
+    }
+
+    const isSupporting = trustUser.supportedBy && trustUser.supportedBy.includes(userId);
 
     res.status(200).json({
       success: true,

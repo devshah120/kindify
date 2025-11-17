@@ -3,7 +3,7 @@ const router = express.Router();
 const supportController = require('../controllers/supportController');
 const auth = require('../middlewares/auth');
 
-// Support/Unsupport a user/trust (Follow/Unfollow)
+// Support/Unsupport a user/trust (Follow/Unfollow) - Same as like/unlike, save/unsave
 router.post('/support', auth, supportController.supportUser);
 router.post('/unsupport', auth, supportController.unsupportUser);
 

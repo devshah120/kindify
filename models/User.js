@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
   enum: ['Trust', 'User', 'Admin'], 
   default: 'User'
 },
+  supportedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Array of user IDs who support this user/trust
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -1,7 +1,5 @@
 const User = require('../models/User');
 const Post = require('../models/Post');
-const Support = require('../models/Support');
-const Supporter = require('../models/Supporter');
 const { deleteFromCloudinary } = require('../config/cloudinary');
 
 exports.getProfile = async (req, res) => {
@@ -26,8 +24,7 @@ exports.getProfile = async (req, res) => {
 
     if (user.role === 'Trust') {
       const postCount = await Post.countDocuments({ createdBy: userId });
-      const supporterCount = await Supporter.countDocuments({ trustId: userId });
-      const supportCount = await Support.countDocuments({ trustId: userId });
+      const supporterCount = user.supportedBy?.length || 0;
 
       profileData = {
         ...profileData,
@@ -43,8 +40,7 @@ exports.getProfile = async (req, res) => {
         pincode: user.pincode || null,
         fullAddress: user.fullAddress || null,
         postCount,
-        supporterCount,
-        supportCount
+        supporterCount
       };
     } else if (user.role === 'User') {
       // For regular users, show basic profile info
