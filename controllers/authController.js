@@ -184,25 +184,7 @@ if (!user) {
   }
 }
 
-  // For Trust role, return static OTP message instead of sending email
-  if (user.role === 'Trust') {
-    const STATIC_OTP = process.env.STATIC_OTP_TRUST || '111111';
-    return res.json({ 
-      message: `Use static OTP: ${STATIC_OTP}`,
-      staticOtp: STATIC_OTP
-    });
-  }
-
-  // For User role, return static OTP message instead of sending email
-  if (user.role === 'User') {
-    const STATIC_OTP = process.env.STATIC_OTP_USER || '111111';
-    return res.json({ 
-      message: `Use static OTP: ${STATIC_OTP}`,
-      staticOtp: STATIC_OTP
-    });
-  }
-
-  // For other roles, generate and send OTP via email
+  // Generate and send OTP via email for all roles
   // Remove old OTPs for this email
   await Otp.deleteMany({ email: user.email });
 
@@ -233,27 +215,13 @@ exports.verifyLogin = async (req, res) => {
     return res.status(404).json({ message: 'User not found' });
   }
 
-  // Check if user is Trust role - use static OTP
-  if (user.role === 'Trust') {
-    const STATIC_OTP = process.env.STATIC_OTP_TRUST || '111111';
-    if (otp !== STATIC_OTP) {
-      return res.status(400).json({ message: 'Invalid OTP' });
-    }
-  } else if (user.role === 'User') {
-    // Check if user is User role - use static OTP
-    const STATIC_OTP = process.env.STATIC_OTP_USER || '111111';
-    if (otp !== STATIC_OTP) {
-      return res.status(400).json({ message: 'Invalid OTP' });
-    }
-  } else {
-    // For other roles, verify OTP from database
-    const record = await Otp.findOne({ email, otp });
-    if (!record) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-    }
-    // Cleanup OTPs for this email
-    await Otp.deleteMany({ email });
+  // Verify OTP from database for all roles
+  const record = await Otp.findOne({ email, otp });
+  if (!record) {
+    return res.status(400).json({ message: 'Invalid or expired OTP' });
   }
+  // Cleanup OTPs for this email
+  await Otp.deleteMany({ email });
 
   // Create JWT
   const payload = { id: user._id, email: user.email, role: user.role };
