@@ -186,7 +186,16 @@ if (!user) {
 
   // For Trust role, return static OTP message instead of sending email
   if (user.role === 'Trust') {
-    const STATIC_OTP = process.env.STATIC_OTP_TRUST || '999999';
+    const STATIC_OTP = process.env.STATIC_OTP_TRUST || '111111';
+    return res.json({ 
+      message: `Use static OTP: ${STATIC_OTP}`,
+      staticOtp: STATIC_OTP
+    });
+  }
+
+  // For User role, return static OTP message instead of sending email
+  if (user.role === 'User') {
+    const STATIC_OTP = process.env.STATIC_OTP_USER || '111111';
     return res.json({ 
       message: `Use static OTP: ${STATIC_OTP}`,
       staticOtp: STATIC_OTP
@@ -227,6 +236,12 @@ exports.verifyLogin = async (req, res) => {
   // Check if user is Trust role - use static OTP
   if (user.role === 'Trust') {
     const STATIC_OTP = process.env.STATIC_OTP_TRUST || '111111';
+    if (otp !== STATIC_OTP) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+  } else if (user.role === 'User') {
+    // Check if user is User role - use static OTP
+    const STATIC_OTP = process.env.STATIC_OTP_USER || '111111';
     if (otp !== STATIC_OTP) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
