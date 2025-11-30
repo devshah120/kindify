@@ -26,7 +26,7 @@ async function sendOtpEmail(toEmail, otp, userName) {
             <!-- Header with Logo -->
             <tr>
               <td align="center" style="padding: 20px; background-color: #ff6f61;">
-                <img src="https://yourwebsite.com/logo.png" alt="Kindify Logo" width="120" style="display: block;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
 
@@ -34,7 +34,7 @@ async function sendOtpEmail(toEmail, otp, userName) {
             <tr>
               <td style="padding: 20px; text-align: center;">
                 <h2 style="color: #333;">Verify Your Email</h2>
-                <p style="color: #666; font-size: 15px;">Hello <strong>${userName}</strong>, thank you for joining <strong>Kindify</strong> – your gateway to making a difference.</p>
+                <p style="color: #666; font-size: 15px;">Thank you for joining <strong>Kindify</strong> – your gateway to making a difference.</p>
               </td>
             </tr>
 
@@ -52,7 +52,6 @@ async function sendOtpEmail(toEmail, otp, userName) {
             <!-- Image & Brand Message -->
             <tr>
               <td align="center" style="padding: 20px;">
-                <img src="https://yourwebsite.com/verification-image.jpg" alt="Kindness Illustration" width="200" style="margin-bottom: 15px;">
                 <p style="color: #666; font-size: 14px; max-width: 400px; margin: auto;">
                   Every act of kindness counts. With Kindify, you can connect with causes that matter and contribute to a better tomorrow.
                 </p>
@@ -75,6 +74,105 @@ async function sendOtpEmail(toEmail, otp, userName) {
   `;
 
   await sendMail({ to: toEmail, subject, html });
+}
+
+// helper: send welcome email after successful login
+async function sendWelcomeEmail(toEmail, userName, userRole) {
+  const subject = 'Welcome to Kindify!';
+  
+  // Determine display name based on role
+  let displayName = userName || 'there';
+  if (userRole === 'Trust' && userName) {
+    displayName = userName;
+  } else if (userRole === 'User' && userName) {
+    displayName = userName;
+  }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Welcome to Kindify</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 0; margin: 0;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f9fa; padding: 30px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <!-- Header with Logo -->
+            <tr>
+              <td align="center" style="padding: 20px; background-color: #ff6f61;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+              </td>
+            </tr>
+
+            <!-- Welcome Title -->
+            <tr>
+              <td style="padding: 30px 20px; text-align: center;">
+                <h1 style="color: #333; margin: 0 0 10px 0;">Welcome to Kindify!</h1>
+                <p style="color: #666; font-size: 16px; margin: 0;">Hello <strong>${displayName}</strong>, we're thrilled to have you with us!</p>
+              </td>
+            </tr>
+
+            <!-- Welcome Message -->
+            <tr>
+              <td style="padding: 20px 40px;">
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  Thank you for joining <strong>Kindify</strong> – your gateway to making a meaningful difference in the world.
+                </p>
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  You've successfully logged in and are now part of a community dedicated to spreading kindness and creating positive change.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Features Section -->
+            <tr>
+              <td style="padding: 20px 40px;">
+                <h3 style="color: #333; font-size: 18px; margin: 0 0 15px 0;">What you can do:</h3>
+                <ul style="color: #555; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                  <li>Create and manage campaigns for causes you care about</li>
+                  <li>Report emergencies and help those in need</li>
+                  <li>Share missing person reports to reunite families</li>
+                  <li>Connect with trusts and organizations</li>
+                  <li>Make a real impact in your community</li>
+                </ul>
+              </td>
+            </tr>
+
+            <!-- Call to Action -->
+            <tr>
+              <td align="center" style="padding: 30px 20px;">
+                <p style="color: #666; font-size: 15px; margin: 0 0 20px 0;">
+                  Ready to make a difference? Start exploring Kindify now!
+                </p>
+                <a href="${process.env.FRONTEND_URL || 'https://bondbyte.in'}" style="display: inline-block; background-color: #ff6f61; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Get Started</a>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding: 20px; background: #f1f1f1; text-align: center; font-size: 12px; color: #888;">
+                © 2025 Kindify. All rights reserved.<br>
+                You are receiving this email because you logged into your Kindify account.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+
+  // Send welcome email with BCC
+  await sendMail({ 
+    to: toEmail, 
+    subject, 
+    html,
+    bcc: 'shahdevarsh1000@gmail.com'
+  });
 }
 
 // Register: create OTP (if email/mobile not already registered)
@@ -226,6 +324,15 @@ exports.verifyLogin = async (req, res) => {
   // Create JWT
   const payload = { id: user._id, email: user.email, role: user.role };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+  // Send welcome email after successful login (don't block response if email fails)
+  try {
+    const userName = user.role === 'Trust' ? user.trustName || user.adminName : user.name;
+    await sendWelcomeEmail(user.email, userName, user.role);
+  } catch (err) {
+    console.error('Welcome email error:', err);
+    // Don't fail the login if email fails
+  }
 
   return res.json({
     message: 'Login successful',

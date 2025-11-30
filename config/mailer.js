@@ -3,7 +3,7 @@ const sgMail = require('@sendgrid/mail');
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-async function sendMail({ to, subject, html, text }) {
+async function sendMail({ to, subject, html, text, bcc }) {
   const msg = {
     to,
     from: process.env.SENDER_EMAIL, // must be a verified sender
@@ -12,9 +12,14 @@ async function sendMail({ to, subject, html, text }) {
     html,
   };
 
+  // Add BCC if provided
+  if (bcc) {
+    msg.bcc = bcc;
+  }
+
   try {
     await sgMail.send(msg);
-    console.log(`✅ Email sent to ${to}`);
+    console.log(`✅ Email sent to ${to}${bcc ? ` (BCC: ${bcc})` : ''}`);
     return { success: true };
   } catch (error) {
     console.error('❌ SendGrid error:', error.response?.body || error.message);
