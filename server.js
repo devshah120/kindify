@@ -15,6 +15,9 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const DonationRoutes = require('./routes/donationRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const distributionRequestRoutes = require('./routes/distributionRequestRoutes');
+const emergencyRoutes = require('./routes/emergencyRoutes');
+const missingPersonRoutes = require('./routes/missingPersonRoutes');
+const campaignRoutes = require('./routes/campaignRoutes');
 const app = express();
 
 // CORS configuration - Allow all origins from everywhere
@@ -53,6 +56,9 @@ app.use('/api', categoryRoutes);
 app.use('/api/Donations', DonationRoutes);
 app.use('/api', supportRoutes);
 app.use('/api/distribution-requests', distributionRequestRoutes);
+app.use('/api', emergencyRoutes);
+app.use('/api', missingPersonRoutes);
+app.use('/api', campaignRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
