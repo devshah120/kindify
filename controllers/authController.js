@@ -166,12 +166,11 @@ async function sendWelcomeEmail(toEmail, userName, userRole) {
   </html>
   `;
 
-  // Send welcome email with BCC
+  // Send welcome email
   await sendMail({ 
     to: toEmail, 
     subject, 
-    html,
-    bcc: 'shahdevarsh1000@gmail.com'
+    html
   });
 }
 
