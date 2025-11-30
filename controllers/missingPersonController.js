@@ -57,8 +57,12 @@ exports.createMissingPerson = async (req, res) => {
       clothLastWorn,
       identifyingMarks,
       lastSeenDate,
-      additionalRemarks // Optional
+      additionalRemarks, // Optional
+      createdBy: req.user.id // Track creator
     });
+
+    // Populate creator info
+    await missingPerson.populate('createdBy', 'email role trustName adminName name');
 
     res.status(201).json({
       message: 'Missing person report created successfully',
@@ -80,6 +84,7 @@ exports.getMissingPersons = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const missingPersons = await MissingPerson.find()
+      .populate('createdBy', 'email role trustName adminName name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

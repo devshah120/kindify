@@ -15,6 +15,7 @@ const missingPersonSchema = new mongoose.Schema({
   identifyingMarks: { type: String, required: true },
   lastSeenDate: { type: Date, required: true },
   additionalRemarks: { type: String, maxlength: 200, required: false },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now }
 });
 

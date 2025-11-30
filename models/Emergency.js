@@ -10,6 +10,7 @@ const emergencySchema = new mongoose.Schema({
   relativeAlternateNumber: { type: String, required: false },
   hospitalName: { type: String, required: true },
   iAccept: { type: Boolean, required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now }
 });
 

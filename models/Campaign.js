@@ -9,6 +9,7 @@ const campaignSchema = new mongoose.Schema({
   maxAmount: { type: Number, required: true },
   goal: { type: Number, required: true },
   description: { type: String, maxlength: 200, required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now }
 });
 

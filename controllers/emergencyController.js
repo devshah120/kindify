@@ -37,8 +37,12 @@ exports.createEmergency = async (req, res) => {
       relativeNumber,
       relativeAlternateNumber, // Optional
       hospitalName,
-      iAccept
+      iAccept,
+      createdBy: req.user.id // Track creator
     });
+
+    // Populate creator info
+    await emergency.populate('createdBy', 'email role trustName adminName name');
 
     res.status(201).json({
       message: 'Emergency created successfully',
@@ -60,6 +64,7 @@ exports.getEmergencies = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const emergencies = await Emergency.find()
+      .populate('createdBy', 'email role trustName adminName name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

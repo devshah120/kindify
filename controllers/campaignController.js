@@ -62,8 +62,12 @@ exports.createCampaign = async (req, res) => {
       minAmount,
       maxAmount,
       goal,
-      description
+      description,
+      createdBy: req.user.id // Track creator
     });
+
+    // Populate creator info
+    await campaign.populate('createdBy', 'email role trustName adminName name');
 
     res.status(201).json({
       message: 'Campaign created successfully',
@@ -91,6 +95,7 @@ exports.getCampaigns = async (req, res) => {
     }
 
     const campaigns = await Campaign.find(query)
+      .populate('createdBy', 'email role trustName adminName name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

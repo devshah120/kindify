@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const auth = require('../middlewares/auth');
 const uploadMissingPersonImage = require('../middlewares/uploadMissingPersonImage');
 const missingPersonController = require('../controllers/missingPersonController');
 
@@ -18,11 +19,11 @@ const handleMulterError = (err, req, res, next) => {
   next();
 };
 
-// POST /api/missing-persons - Create a new missing person report
-router.post('/missing-persons', uploadMissingPersonImage, handleMulterError, missingPersonController.createMissingPerson);
+// POST /api/missing-persons - Create a new missing person report (requires authentication)
+router.post('/missing-persons', auth, uploadMissingPersonImage, handleMulterError, missingPersonController.createMissingPerson);
 
-// GET /api/missing-persons - Get all missing person reports
-router.get('/missing-persons', missingPersonController.getMissingPersons);
+// GET /api/missing-persons - Get all missing person reports (requires authentication)
+router.get('/missing-persons', auth, missingPersonController.getMissingPersons);
 
 module.exports = router;
 
