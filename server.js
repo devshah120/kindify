@@ -47,6 +47,7 @@ mongoose.connect(process.env.MONGO_URI, {
 });
 
 app.use('/auth', authRoutes);
+app.use('/api', authRoutes); // Also mount auth routes under /api for trust/search
 app.use('/api', profileRoutes);
 app.use('/api', postRoutes);
 app.use('/api', storyRoutes);
