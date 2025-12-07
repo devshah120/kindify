@@ -9,4 +9,5 @@ router.post('/login', authController.login);                  // body: { emailOr
 router.post('/verify-login', authController.verifyLogin);     // body: { email, otp }
 router.post('/trust/register', upload.single('darpanCertificate'), authController.registerTrust);
 router.get('/trust/all',auth, authController.getAllTrusts);
+router.get('/trust/search', authController.searchTrusts);
 module.exports = router;

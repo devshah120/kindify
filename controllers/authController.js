@@ -366,3 +366,77 @@ exports.getAllTrusts = async (req, res) => {
     return res.status(500).json({ message: 'Failed to fetch trusts' });
   }
 };
+
+// Search trusts only
+exports.searchTrusts = async (req, res) => {
+  try {
+    const { query, page = 1, limit = 10 } = req.query;
+
+    if (!query || query.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Search query is required' 
+      });
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Search filter - only Trust role, search in multiple fields
+    const searchFilter = {
+      role: 'Trust',
+      $or: [
+        { trustName: { $regex: query, $options: 'i' } },
+        { adminName: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+        { city: { $regex: query, $options: 'i' } },
+        { state: { $regex: query, $options: 'i' } },
+        { darpanId: { $regex: query, $options: 'i' } }
+      ]
+    };
+
+    const trusts = await User.find(searchFilter)
+      .select('trustName adminName email role profilePhoto designation city state address pincode darpanId createdAt supportedBy')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const totalTrusts = await User.countDocuments(searchFilter);
+
+    // Get support count for each trust
+    const trustsWithCounts = trusts.map(trust => ({
+      _id: trust._id,
+      trustName: trust.trustName,
+      adminName: trust.adminName,
+      email: trust.email,
+      role: trust.role,
+      profilePhoto: trust.profilePhoto || null,
+      designation: trust.designation || null,
+      city: trust.city || null,
+      state: trust.state || null,
+      address: trust.address || null,
+      pincode: trust.pincode || null,
+      darpanId: trust.darpanId || null,
+      totalSupporters: trust.supportedBy ? trust.supportedBy.length : 0,
+      createdAt: trust.createdAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      query: query,
+      currentPage: pageNum,
+      totalPages: Math.ceil(totalTrusts / limitNum),
+      totalTrusts,
+      trusts: trustsWithCounts
+    });
+
+  } catch (err) {
+    console.error('Search Trusts Error:', err);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to search trusts',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
