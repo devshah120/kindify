@@ -34,5 +34,6 @@ router.post('/post/unlike', auth, postController.unlikePost);
 router.post('/post/save', auth, postController.savePost);
 router.post('/post/unsave', auth, postController.unsavePost);
 router.delete('/posts/:id', auth, postController.deletePost);
+router.get('/posts/search', auth, postController.searchPosts);
 
 module.exports = router;

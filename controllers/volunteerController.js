@@ -5,18 +5,115 @@ exports.joinVolunteer = async (req, res) => {
     try {
         const { fullName, email, trust, availability, options } = req.body;
         const userId = req.user?.id; // Get userId from authenticated user if available
+
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "User authentication required" 
+            });
+        }
+
+        // Check if user has already made 5 requests
+        const existingRequestsCount = await Volunteer.countDocuments({ userId });
+        if (existingRequestsCount >= 5) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "You have reached the maximum limit of 5 volunteer requests. You cannot submit more requests." 
+            });
+        }
+
+        // Normalize input data for comparison
+        const normalizedFullName = fullName?.trim();
+        const normalizedEmail = email?.trim().toLowerCase();
+        
+        // Convert availability to normalized object for comparison
+        let normalizedAvailability = {};
+        if (availability) {
+            if (availability instanceof Map) {
+                normalizedAvailability = Object.fromEntries(availability);
+            } else if (typeof availability === 'object') {
+                normalizedAvailability = availability;
+            }
+            // Sort arrays within availability for consistent comparison
+            for (const key in normalizedAvailability) {
+                if (Array.isArray(normalizedAvailability[key])) {
+                    normalizedAvailability[key] = [...normalizedAvailability[key]].sort();
+                }
+            }
+        }
+
+        // Normalize options array for comparison (sort and filter empty values)
+        const normalizedOptions = Array.isArray(options) 
+            ? [...options].map(opt => opt?.trim()).filter(opt => opt && opt !== '').sort()
+            : [];
+
+        // Check for existing volunteer requests by the same user
+        const existingVolunteers = await Volunteer.find({ 
+            userId,
+            fullName: normalizedFullName,
+            email: normalizedEmail,
+            trust
+        });
+
+        // Check if any existing volunteer has the same availability and options
+        for (const existing of existingVolunteers) {
+            // Normalize existing availability
+            let existingAvailability = {};
+            if (existing.availability) {
+                if (existing.availability instanceof Map) {
+                    existingAvailability = Object.fromEntries(existing.availability);
+                } else if (typeof existing.availability === 'object') {
+                    existingAvailability = existing.availability;
+                }
+                // Sort arrays within availability for consistent comparison
+                for (const key in existingAvailability) {
+                    if (Array.isArray(existingAvailability[key])) {
+                        existingAvailability[key] = [...existingAvailability[key]].sort();
+                    }
+                }
+            }
+
+            // Compare availability objects
+            const availabilityMatch = JSON.stringify(normalizedAvailability) === JSON.stringify(existingAvailability);
+
+            // Normalize and compare options arrays
+            const existingOptions = Array.isArray(existing.options)
+                ? [...existing.options].map(opt => opt?.trim()).filter(opt => opt && opt !== '').sort()
+                : [];
+            const optionsMatch = JSON.stringify(normalizedOptions) === JSON.stringify(existingOptions);
+
+            // If all details match, it's a duplicate
+            if (availabilityMatch && optionsMatch) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "You have already submitted a volunteer request with the same details. Please use different information." 
+                });
+            }
+        }
+
         const volunteer = new Volunteer({ 
             fullName, 
             email, 
             trust, 
             availability, 
             options,
-            userId: userId || null
+            userId
         });
         await volunteer.save();
-        res.status(201).json({ success: true, message: "Thank you for joining as a volunteer." });
+        
+        const remainingRequests = 5 - (existingRequestsCount + 1);
+        res.status(201).json({ 
+            success: true, 
+            message: "Thank you for joining as a volunteer.",
+            remainingRequests: remainingRequests
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server error." });
+        console.error('Error joining volunteer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Server error.",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 

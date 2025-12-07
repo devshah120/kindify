@@ -381,3 +381,115 @@ exports.deletePost = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// Search posts
+exports.searchPosts = async (req, res) => {
+  try {
+    const { query, page = 1, limit = 10 } = req.query;
+
+    if (!query || query.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Search query is required' 
+      });
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const searchFilter = {
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { location: { $regex: query, $options: 'i' } }
+      ]
+    };
+
+    const posts = await Post.find(searchFilter)
+      .select('name location pictures categoryId likedBy savedBy createdBy createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate('createdBy', 'trustName adminName name email role')
+      .populate('categoryId', 'name icon')
+      .populate('likedBy', '_id name trustName adminName')
+      .populate('savedBy', '_id name trustName adminName');
+
+    const totalPosts = await Post.countDocuments(searchFilter);
+
+    const userId = req.user?.id;
+    let supportMap = {};
+    let creatorSupportersMap = {};
+    
+    if (posts.length > 0) {
+      const creatorIds = posts
+        .filter(post => post.createdBy && post.createdBy._id)
+        .map(post => post.createdBy._id.toString());
+      
+      if (creatorIds.length > 0) {
+        const creators = await User.find({ _id: { $in: creatorIds } })
+          .select('_id supportedBy');
+        
+        creators.forEach(creator => {
+          const creatorIdStr = creator._id.toString();
+          creatorSupportersMap[creatorIdStr] = creator.supportedBy || [];
+          
+          if (userId && creator.supportedBy && creator.supportedBy.includes(userId)) {
+            supportMap[creatorIdStr] = true;
+          }
+        });
+      }
+    }
+
+    const postsWithCounts = posts.map(post => {
+      const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
+      const creatorId = post.createdBy._id.toString();
+      const isSupporting = userId ? !!supportMap[creatorId] : false;
+      const supportedBy = creatorSupportersMap[creatorId] || [];
+      
+      return {
+        _id: post._id,
+        name: creatorName,
+        postTitle: post.name,
+        location: post.location,
+        pictures: post.pictures,
+        categoryId: post.categoryId ? {
+          _id: post.categoryId._id,
+          name: post.categoryId.name,
+          icon: post.categoryId.icon
+        } : null,
+        createdBy: {
+          id: post.createdBy._id,
+          name: creatorName,
+          email: post.createdBy.email,
+          role: post.createdBy.role
+        },
+        isSupporting: isSupporting,
+        supportedBy: supportedBy,
+        totalSupporters: supportedBy.length,
+        createdAt: post.createdAt,
+        likedBy: post.likedBy,
+        savedBy: post.savedBy,
+        totalLikes: post.likedBy.length,
+        totalSaves: post.savedBy.length
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      query: query,
+      currentPage: pageNum,
+      totalPages: Math.ceil(totalPosts / limitNum),
+      totalPosts,
+      posts: postsWithCounts
+    });
+
+  } catch (error) {
+    console.error('Error searching posts:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

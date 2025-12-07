@@ -117,3 +117,32 @@ exports.getCampaigns = async (req, res) => {
   }
 };
 
+// DELETE /api/campaigns/:id - Delete a campaign
+exports.deleteCampaign = async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    
+    if (!campaign) {
+      return res.status(404).json({ 
+        message: 'Campaign not found' 
+      });
+    }
+
+    // Check if the user is the creator of the campaign
+    if (campaign.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        message: 'You are not authorized to delete this campaign. Only the creator can delete it.' 
+      });
+    }
+
+    await Campaign.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ 
+      message: 'Campaign deleted successfully' 
+    });
+  } catch (err) {
+    console.error('Delete Campaign Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete campaign' });
+  }
+};
+
