@@ -1,5 +1,162 @@
 const Volunteer = require('../models/Volunteer');
+const User = require('../models/User');
 const mongoose = require('mongoose');
+const { sendMail } = require('../config/mailer');
+
+// Helper: Send email when volunteer submits request
+async function sendVolunteerSubmissionEmail(volunteerEmail, volunteerName, trustName) {
+  const subject = 'Volunteer Request Submitted - Kindify';
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Volunteer Request Submitted</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 0; margin: 0;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f9fa; padding: 30px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <tr>
+              <td align="center" style="padding: 20px; background-color: #ff6f61;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 30px 20px; text-align: center;">
+                <h1 style="color: #333; margin: 0 0 10px 0;">Thank You for Your Interest!</h1>
+                <p style="color: #666; font-size: 16px; margin: 0;">Hello <strong>${volunteerName}</strong>,</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 40px;">
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  We have received your volunteer request for <strong>${trustName}</strong>. Your application is currently under review.
+                </p>
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  The trust will review your application and get back to you soon. We appreciate your willingness to make a difference in your community.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px; background: #f1f1f1; text-align: center; font-size: 12px; color: #888;">
+                © 2025 Kindify. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+  await sendMail({ to: volunteerEmail, subject, html });
+}
+
+// Helper: Send email when volunteer is approved
+async function sendVolunteerApprovalEmail(volunteerEmail, volunteerName, trustName, remarks) {
+  const subject = 'Volunteer Request Approved - Kindify';
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Volunteer Request Approved</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 0; margin: 0;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f9fa; padding: 30px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <tr>
+              <td align="center" style="padding: 20px; background-color: #28a745;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 30px 20px; text-align: center;">
+                <h1 style="color: #333; margin: 0 0 10px 0;">Congratulations!</h1>
+                <p style="color: #666; font-size: 16px; margin: 0;">Hello <strong>${volunteerName}</strong>,</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 40px;">
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  Great news! Your volunteer request for <strong>${trustName}</strong> has been <strong style="color: #28a745;">approved</strong>!
+                </p>
+                ${remarks ? `<p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;"><strong>Message from ${trustName}:</strong><br>${remarks}</p>` : ''}
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  You can now start volunteering with ${trustName}. Thank you for your commitment to making a positive impact!
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px; background: #f1f1f1; text-align: center; font-size: 12px; color: #888;">
+                © 2025 Kindify. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+  await sendMail({ to: volunteerEmail, subject, html });
+}
+
+// Helper: Send email when volunteer is rejected
+async function sendVolunteerRejectionEmail(volunteerEmail, volunteerName, trustName, remarks) {
+  const subject = 'Volunteer Request Update - Kindify';
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Volunteer Request Update</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 0; margin: 0;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f9fa; padding: 30px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <tr>
+              <td align="center" style="padding: 20px; background-color: #dc3545;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 30px 20px; text-align: center;">
+                <h1 style="color: #333; margin: 0 0 10px 0;">Volunteer Request Update</h1>
+                <p style="color: #666; font-size: 16px; margin: 0;">Hello <strong>${volunteerName}</strong>,</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 40px;">
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  We regret to inform you that your volunteer request for <strong>${trustName}</strong> has not been approved at this time.
+                </p>
+                ${remarks ? `<p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;"><strong>Message from ${trustName}:</strong><br>${remarks}</p>` : ''}
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+                  We appreciate your interest in volunteering and encourage you to explore other opportunities on Kindify.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px; background: #f1f1f1; text-align: center; font-size: 12px; color: #888;">
+                © 2025 Kindify. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+  await sendMail({ to: volunteerEmail, subject, html });
+}
 
 exports.joinVolunteer = async (req, res) => {
     try {
@@ -100,6 +257,18 @@ exports.joinVolunteer = async (req, res) => {
             userId
         });
         await volunteer.save();
+
+        // Get trust information for email
+        const trustInfo = await User.findById(trust).select('trustName email');
+        const trustName = trustInfo?.trustName || 'the Trust';
+
+        // Send email to volunteer (don't block response if email fails)
+        try {
+            await sendVolunteerSubmissionEmail(email, fullName, trustName);
+        } catch (err) {
+            console.error('Error sending volunteer submission email:', err);
+            // Don't fail the request if email fails
+        }
         
         const remainingRequests = 5 - (existingRequestsCount + 1);
         res.status(201).json({ 
@@ -259,6 +428,29 @@ exports.updateVolunteerStatus = async (req, res) => {
             createdAt: volunteer.createdAt,
             updatedAt: volunteer.updatedAt
         };
+
+        // Send email to volunteer based on status (don't block response if email fails)
+        try {
+            const trustName = trust?.trustName || 'the Trust';
+            if (status === 'approved') {
+                await sendVolunteerApprovalEmail(
+                    volunteer.email, 
+                    volunteer.fullName, 
+                    trustName, 
+                    remarks
+                );
+            } else if (status === 'rejected') {
+                await sendVolunteerRejectionEmail(
+                    volunteer.email, 
+                    volunteer.fullName, 
+                    trustName, 
+                    remarks
+                );
+            }
+        } catch (err) {
+            console.error('Error sending volunteer status email:', err);
+            // Don't fail the request if email fails
+        }
 
         res.status(200).json({ 
             success: true, 
