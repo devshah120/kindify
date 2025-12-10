@@ -4,7 +4,7 @@ const auth = require('../middlewares/auth');
 
 const router = express.Router();
 
-router.post('/volunteer', joinVolunteer);
+router.post('/volunteer', auth, joinVolunteer);
 router.get('/volunteer', getVolunteers);
 
 // Get volunteers by trust (for Trust admin) - with profile pics
