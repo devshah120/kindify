@@ -668,8 +668,8 @@ async function saveCategoryConfigurations(req, res) {
   }
 }
 
-// Update/Edit Trust Category Configuration
-async function updateTrustCategoryConfig(req, res) {
+// Update/Edit Normal Category Configuration
+async function updateNormalCategoryConfig(req, res) {
   try {
     const { configId } = req.params;
     const {
@@ -678,8 +678,8 @@ async function updateTrustCategoryConfig(req, res) {
       maxAmount,
       quantity,
       amountPerQty,
-      supportOptions,
-      categoryRemarks
+      categoryRemarks,
+      status
     } = req.body;
     const trustId = req.user?.id;
 
@@ -692,28 +692,23 @@ async function updateTrustCategoryConfig(req, res) {
 
     const config = await TrustCategoryConfig.findOne({ 
       _id: configId, 
-      trustId 
+      trustId,
+      type: 'Normal'
     });
 
     if (!config) {
       return res.status(404).json({ 
         success: false,
-        message: 'Category configuration not found' 
+        message: 'Normal category configuration not found' 
       });
     }
 
     // Update donation type if provided
     if (donationType) {
-      if (config.type === 'Normal' && !['On Price', 'On Quantity'].includes(donationType)) {
+      if (!['On Price', 'On Quantity'].includes(donationType)) {
         return res.status(400).json({ 
           success: false,
           message: 'Normal donation type must be "On Price" or "On Quantity"' 
-        });
-      }
-      if (config.type === 'Special' && !['Menu', 'On Quantity'].includes(donationType)) {
-        return res.status(400).json({ 
-          success: false,
-          message: 'Special donation type must be "Menu" or "On Quantity"' 
         });
       }
       config.donationType = donationType;
@@ -748,7 +743,6 @@ async function updateTrustCategoryConfig(req, res) {
       // Clear quantity fields if switching to On Price
       config.quantity = undefined;
       config.amountPerQty = undefined;
-      config.supportOptions = undefined;
     } else if (config.donationType === 'On Quantity') {
       if (quantity !== undefined) {
         if (quantity <= 0) {
@@ -771,10 +765,115 @@ async function updateTrustCategoryConfig(req, res) {
       // Clear price fields if switching to On Quantity
       config.minAmount = undefined;
       config.maxAmount = undefined;
-      if (config.type === 'Special') {
-        config.supportOptions = undefined;
+    }
+
+    // Update category remarks if provided
+    if (categoryRemarks !== undefined) {
+      if (categoryRemarks.length > 200) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Category remarks must be 200 characters or less' 
+        });
       }
-    } else if (config.donationType === 'Menu' && config.type === 'Special') {
+      config.categoryRemarks = categoryRemarks;
+    }
+
+    // Update status if provided
+    if (status !== undefined) {
+      if (!['active', 'inactive'].includes(status)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Status must be "active" or "inactive"' 
+        });
+      }
+      config.status = status;
+    }
+
+    await config.save();
+    await config.populate('categoryId', 'name icon');
+
+    res.status(200).json({
+      success: true,
+      message: 'Normal category configuration updated successfully',
+      config
+    });
+  } catch (err) {
+    console.error('Error updating normal category configuration:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+}
+
+// Update/Edit Special Category Configuration
+async function updateSpecialCategoryConfig(req, res) {
+  try {
+    const { configId } = req.params;
+    const {
+      donationType,
+      quantity,
+      amountPerQty,
+      supportOptions,
+      categoryRemarks,
+      status
+    } = req.body;
+    const trustId = req.user?.id;
+
+    if (!trustId) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'User authentication required' 
+      });
+    }
+
+    const config = await TrustCategoryConfig.findOne({ 
+      _id: configId, 
+      trustId,
+      type: 'Special'
+    });
+
+    if (!config) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Special category configuration not found' 
+      });
+    }
+
+    // Update donation type if provided
+    if (donationType) {
+      if (!['Menu', 'On Quantity'].includes(donationType)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Special donation type must be "Menu" or "On Quantity"' 
+        });
+      }
+      config.donationType = donationType;
+    }
+
+    // Update fields based on donation type
+    if (config.donationType === 'On Quantity') {
+      if (quantity !== undefined) {
+        if (quantity <= 0) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'quantity must be greater than 0' 
+          });
+        }
+        config.quantity = quantity;
+      }
+      if (amountPerQty !== undefined) {
+        if (amountPerQty < 0) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'amountPerQty must be non-negative' 
+          });
+        }
+        config.amountPerQty = amountPerQty;
+      }
+      // Clear menu fields if switching to On Quantity
+      config.supportOptions = undefined;
+    } else if (config.donationType === 'Menu') {
       if (supportOptions !== undefined) {
         if (!Array.isArray(supportOptions) || supportOptions.length === 0) {
           return res.status(400).json({ 
@@ -801,8 +900,6 @@ async function updateTrustCategoryConfig(req, res) {
       // Clear quantity fields if switching to Menu
       config.quantity = undefined;
       config.amountPerQty = undefined;
-      config.minAmount = undefined;
-      config.maxAmount = undefined;
     }
 
     // Update category remarks if provided
@@ -816,16 +913,27 @@ async function updateTrustCategoryConfig(req, res) {
       config.categoryRemarks = categoryRemarks;
     }
 
+    // Update status if provided
+    if (status !== undefined) {
+      if (!['active', 'inactive'].includes(status)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Status must be "active" or "inactive"' 
+        });
+      }
+      config.status = status;
+    }
+
     await config.save();
     await config.populate('categoryId', 'name icon');
 
     res.status(200).json({
       success: true,
-      message: 'Category configuration updated successfully',
+      message: 'Special category configuration updated successfully',
       config
     });
   } catch (err) {
-    console.error('Error updating category configuration:', err);
+    console.error('Error updating special category configuration:', err);
     res.status(500).json({ 
       success: false,
       error: err.message 
@@ -938,7 +1046,8 @@ module.exports = {
   createSpecialCategoryConfig,
   saveCategoryConfigurations,
   getTrustCategoryConfigs,
-  updateTrustCategoryConfig,
+  updateNormalCategoryConfig,
+  updateSpecialCategoryConfig,
   deleteTrustCategoryConfig,
   toggleCategoryStatus
 };

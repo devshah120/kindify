@@ -19,7 +19,8 @@ router.delete('/special-category/:id', categoryController.deleteSpecialCategory)
 // Trust Category Configuration routes
 router.post('/trust/category/save', auth, categoryController.saveCategoryConfigurations); // Save both Normal and Special together
 router.get('/trust/category/configs', auth, categoryController.getTrustCategoryConfigs);
-router.put('/trust/category/update/:configId', auth, categoryController.updateTrustCategoryConfig); // Edit/Update configuration
+router.put('/trust/category/normal/:configId', auth, categoryController.updateNormalCategoryConfig); // Update Normal category
+router.put('/trust/category/special/:configId', auth, categoryController.updateSpecialCategoryConfig); // Update Special category
 router.delete('/trust/category/config/:configId', auth, categoryController.deleteTrustCategoryConfig);
 router.patch('/trust/category/config/:configId/status', auth, categoryController.toggleCategoryStatus);
 
