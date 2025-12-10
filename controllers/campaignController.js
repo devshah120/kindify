@@ -1,4 +1,5 @@
 const Campaign = require('../models/Campaign');
+const mongoose = require('mongoose');
 
 // POST /api/campaigns - Create a new campaign
 exports.createCampaign = async (req, res) => {
@@ -62,12 +63,15 @@ exports.createCampaign = async (req, res) => {
       minAmount,
       maxAmount,
       goal,
+      raisedAmount: 0, // Initialize raised amount to 0
       description,
+      status: 'active', // Default status is active
       createdBy: req.user.id // Track creator
     });
 
-    // Populate creator info
+    // Populate creator and category info
     await campaign.populate('createdBy', 'email role trustName adminName name');
+    await campaign.populate('category', 'name icon');
 
     res.status(201).json({
       message: 'Campaign created successfully',
@@ -91,11 +95,17 @@ exports.getCampaigns = async (req, res) => {
     // Build query
     const query = {};
     if (category) {
-      query.category = category;
+      // Check if category is a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        query.category = category;
+      } else {
+        return res.status(400).json({ error: 'Invalid category ID format' });
+      }
     }
 
     const campaigns = await Campaign.find(query)
       .populate('createdBy', 'email role trustName adminName name')
+      .populate('category', 'name icon')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
