@@ -16,10 +16,10 @@ exports.createEmergency = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!patientName || !patientAge || !patientId || !bloodGroup || 
+    if (!patientName || !patientAge || !bloodGroup || 
         !requiredQty || !relativeNumber || !hospitalName || iAccept === undefined) {
       return res.status(400).json({ 
-        message: 'Missing required fields. Required: patientName, patientAge, patientId, bloodGroup, requiredQty, relativeNumber, hospitalName, iAccept' 
+        message: 'Missing required fields. Required: patientName, patientAge, bloodGroup, requiredQty, relativeNumber, hospitalName, iAccept' 
       });
     }
 

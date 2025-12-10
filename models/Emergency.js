@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const emergencySchema = new mongoose.Schema({
   patientName: { type: String, required: true },
   patientAge: { type: Number, required: true },
-  patientId: { type: String, required: true },
+  patientId: { type: String, required: false },
   bloodGroup: { type: String, required: true },
   requiredQty: { type: Number, required: true },
   relativeNumber: { type: String, required: true },
