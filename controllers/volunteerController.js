@@ -20,7 +20,7 @@ async function sendVolunteerSubmissionEmail(volunteerEmail, volunteerName, trust
           <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <tr>
               <td align="center" style="padding: 20px; background-color: #ff6f61;">
-                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
             <tr>
@@ -71,7 +71,7 @@ async function sendVolunteerApprovalEmail(volunteerEmail, volunteerName, trustNa
           <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <tr>
               <td align="center" style="padding: 20px; background-color: #28a745;">
-                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
             <tr>
@@ -123,7 +123,7 @@ async function sendVolunteerRejectionEmail(volunteerEmail, volunteerName, trustN
           <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <tr>
               <td align="center" style="padding: 20px; background-color: #dc3545;">
-                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
             <tr>

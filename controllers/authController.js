@@ -26,7 +26,7 @@ async function sendOtpEmail(toEmail, otp, userName) {
             <!-- Header with Logo -->
             <tr>
               <td align="center" style="padding: 20px; background-color: #ff6f61;">
-                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
 
@@ -103,7 +103,7 @@ async function sendWelcomeEmail(toEmail, userName, userRole) {
             <!-- Header with Logo -->
             <tr>
               <td align="center" style="padding: 20px; background-color: #ff6f61;">
-                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1764518018/Group_87-1_lfvco5.png" alt="Kindify Logo" width="120" style="display: block;">
+                <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
 
