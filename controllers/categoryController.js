@@ -1,5 +1,6 @@
 const { Category, SpecialCategory } = require('../models/Category');
 const TrustCategoryConfig = require('../models/TrustCategoryConfig');
+const User = require('../models/User');
 
 // Create
 async function createCategory(req, res) {
@@ -941,6 +942,102 @@ async function updateSpecialCategoryConfig(req, res) {
   }
 }
 
+// Get Trusts List Based on Category Configurations
+async function getTrustsByCategoryConfigs(req, res) {
+  try {
+    const { status, categoryId } = req.query; // Optional filters
+
+    // Build filter for category configurations
+    const configFilter = {};
+    if (status && ['active', 'inactive'].includes(status)) {
+      configFilter.status = status;
+    }
+    if (categoryId) {
+      configFilter.categoryId = categoryId;
+    }
+
+    // Get all unique trustIds that have category configurations
+    const configs = await TrustCategoryConfig.find(configFilter).select('trustId');
+    const uniqueTrustIds = [...new Set(configs.map(config => config.trustId.toString()))];
+
+    if (uniqueTrustIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        trusts: []
+      });
+    }
+
+    // Get trust details for all unique trustIds
+    const trusts = await User.find({
+      _id: { $in: uniqueTrustIds },
+      role: 'Trust'
+    })
+      .select('trustName adminName email role profilePhoto designation city state address pincode darpanId createdAt supportedBy')
+      .sort({ createdAt: -1 });
+
+    // Get category configuration counts for each trust
+    const trustsWithCategoryInfo = await Promise.all(
+      trusts.map(async (trust) => {
+        const trustConfigs = await TrustCategoryConfig.find({ trustId: trust._id })
+          .populate('categoryId', 'name icon')
+          .select('type status categoryId');
+
+        const normalConfigs = trustConfigs.filter(c => c.type === 'Normal');
+        const specialConfigs = trustConfigs.filter(c => c.type === 'Special');
+        const activeConfigs = trustConfigs.filter(c => c.status === 'active');
+        const inactiveConfigs = trustConfigs.filter(c => c.status === 'inactive');
+
+        // Get unique categories
+        const categories = trustConfigs.map(c => ({
+          _id: c.categoryId?._id,
+          name: c.categoryId?.name,
+          icon: c.categoryId?.icon
+        })).filter((cat, index, self) => 
+          index === self.findIndex(c => c._id?.toString() === cat._id?.toString())
+        );
+
+        return {
+          _id: trust._id,
+          trustName: trust.trustName,
+          adminName: trust.adminName,
+          email: trust.email,
+          role: trust.role,
+          profilePhoto: trust.profilePhoto || null,
+          designation: trust.designation || null,
+          city: trust.city || null,
+          state: trust.state || null,
+          address: trust.address || null,
+          pincode: trust.pincode || null,
+          darpanId: trust.darpanId || null,
+          totalSupporters: trust.supportedBy ? trust.supportedBy.length : 0,
+          categories: categories,
+          categoryStats: {
+            totalCategories: categories.length,
+            normalCount: normalConfigs.length,
+            specialCount: specialConfigs.length,
+            activeCount: activeConfigs.length,
+            inactiveCount: inactiveConfigs.length
+          },
+          createdAt: trust.createdAt
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      count: trustsWithCategoryInfo.length,
+      trusts: trustsWithCategoryInfo
+    });
+  } catch (err) {
+    console.error('Error fetching trusts by category configs:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+}
+
 // Delete Trust Category Configuration
 async function deleteTrustCategoryConfig(req, res) {
   try {
@@ -1046,6 +1143,7 @@ module.exports = {
   createSpecialCategoryConfig,
   saveCategoryConfigurations,
   getTrustCategoryConfigs,
+  getTrustsByCategoryConfigs,
   updateNormalCategoryConfig,
   updateSpecialCategoryConfig,
   deleteTrustCategoryConfig,
