@@ -1,4 +1,6 @@
 const Emergency = require('../models/Emergency');
+const User = require('../models/User');
+const { sendNotificationToRole } = require('../services/notificationService');
 
 // POST /api/emergencies - Create a new emergency
 exports.createEmergency = async (req, res) => {
@@ -43,6 +45,24 @@ exports.createEmergency = async (req, res) => {
 
     // Populate creator info
     await emergency.populate('createdBy', 'email role trustName adminName name');
+
+    // Send push notification to all users about new emergency (don't block response if notification fails)
+    try {
+      await sendNotificationToRole(
+        'User',
+        'New Emergency Blood Request',
+        `Emergency blood request for ${patientName} (${bloodGroup}) at ${hospitalName}`,
+        {
+          type: 'emergency_created',
+          emergencyId: emergency._id.toString(),
+          bloodGroup: bloodGroup,
+          hospitalName: hospitalName
+        }
+      );
+    } catch (err) {
+      console.error('Error sending emergency notification:', err);
+      // Don't fail the request if notification fails
+    }
 
     res.status(201).json({
       message: 'Emergency created successfully',

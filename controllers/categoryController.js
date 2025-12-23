@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { Category, SpecialCategory } = require('../models/Category');
 const TrustCategoryConfig = require('../models/TrustCategoryConfig');
 const User = require('../models/User');
@@ -584,38 +585,70 @@ async function saveCategoryConfigurations(req, res) {
       }
 
       if (specialDonationType === 'Menu') {
-        if (!specialSupportOptions || !Array.isArray(specialSupportOptions) || specialSupportOptions.length === 0) {
-          return res.status(400).json({ 
-            success: false,
-            message: 'specialSupportOptions array is required for "Menu" donation type' 
-          });
-        }
-        for (const option of specialSupportOptions) {
-          if (!option.name || option.amount === undefined) {
+        // Menu can use either single quantity/amountPerQty OR supportOptions (multiple tiers)
+        if (specialSupportOptions && Array.isArray(specialSupportOptions) && specialSupportOptions.length > 0) {
+          // Using supportOptions for multiple tiers
+          for (const option of specialSupportOptions) {
+            if (!option.name || option.amount === undefined) {
+              return res.status(400).json({ 
+                success: false,
+                message: 'Each support option must have name and amount' 
+              });
+            }
+            if (option.amount < 0) {
+              return res.status(400).json({ 
+                success: false,
+                message: 'Support option amount must be non-negative' 
+              });
+            }
+          }
+        } else {
+          // Using single quantity/amountPerQty
+          if (specialQuantity === undefined || specialAmountPerQty === undefined) {
             return res.status(400).json({ 
               success: false,
-              message: 'Each support option must have name and amount' 
+              message: 'For "Menu" donation type, either specialSupportOptions array OR (specialQuantity and specialAmountPerQty) is required' 
             });
           }
-          if (option.amount < 0) {
+          if (specialQuantity <= 0 || specialAmountPerQty < 0) {
             return res.status(400).json({ 
               success: false,
-              message: 'Support option amount must be non-negative' 
+              message: 'Invalid quantity values for Special category' 
             });
           }
         }
       } else if (specialDonationType === 'On Quantity') {
-        if (specialQuantity === undefined || specialAmountPerQty === undefined) {
-          return res.status(400).json({ 
-            success: false,
-            message: 'specialQuantity and specialAmountPerQty are required for "On Quantity" donation type' 
-          });
-        }
-        if (specialQuantity <= 0 || specialAmountPerQty < 0) {
-          return res.status(400).json({ 
-            success: false,
-            message: 'Invalid quantity values for Special category' 
-          });
+        // On Quantity can use either single quantity/amountPerQty OR supportOptions (multiple tiers)
+        if (specialSupportOptions && Array.isArray(specialSupportOptions) && specialSupportOptions.length > 0) {
+          // Using supportOptions for multiple quantity tiers
+          for (const option of specialSupportOptions) {
+            if (!option.name || option.amount === undefined) {
+              return res.status(400).json({ 
+                success: false,
+                message: 'Each support option must have name and amount' 
+              });
+            }
+            if (option.amount < 0) {
+              return res.status(400).json({ 
+                success: false,
+                message: 'Support option amount must be non-negative' 
+              });
+            }
+          }
+        } else {
+          // Using single quantity/amountPerQty
+          if (specialQuantity === undefined || specialAmountPerQty === undefined) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'For "On Quantity" donation type, either specialSupportOptions array OR (specialQuantity and specialAmountPerQty) is required' 
+            });
+          }
+          if (specialQuantity <= 0 || specialAmountPerQty < 0) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'Invalid quantity values for Special category' 
+            });
+          }
         }
       }
 
@@ -635,10 +668,21 @@ async function saveCategoryConfigurations(req, res) {
       };
 
       if (specialDonationType === 'Menu') {
-        specialConfigData.supportOptions = specialSupportOptions;
-      } else {
-        specialConfigData.quantity = specialQuantity;
-        specialConfigData.amountPerQty = specialAmountPerQty;
+        // Menu can use either supportOptions or single quantity/amountPerQty
+        if (specialSupportOptions && Array.isArray(specialSupportOptions) && specialSupportOptions.length > 0) {
+          specialConfigData.supportOptions = specialSupportOptions;
+        } else {
+          specialConfigData.quantity = specialQuantity;
+          specialConfigData.amountPerQty = specialAmountPerQty;
+        }
+      } else if (specialDonationType === 'On Quantity') {
+        // On Quantity can use either supportOptions or single quantity/amountPerQty
+        if (specialSupportOptions && Array.isArray(specialSupportOptions) && specialSupportOptions.length > 0) {
+          specialConfigData.supportOptions = specialSupportOptions;
+        } else {
+          specialConfigData.quantity = specialQuantity;
+          specialConfigData.amountPerQty = specialAmountPerQty;
+        }
       }
 
       const specialConfig = new TrustCategoryConfig(specialConfigData);
@@ -854,28 +898,9 @@ async function updateSpecialCategoryConfig(req, res) {
 
     // Update fields based on donation type
     if (config.donationType === 'On Quantity') {
-      if (quantity !== undefined) {
-        if (quantity <= 0) {
-          return res.status(400).json({ 
-            success: false,
-            message: 'quantity must be greater than 0' 
-          });
-        }
-        config.quantity = quantity;
-      }
-      if (amountPerQty !== undefined) {
-        if (amountPerQty < 0) {
-          return res.status(400).json({ 
-            success: false,
-            message: 'amountPerQty must be non-negative' 
-          });
-        }
-        config.amountPerQty = amountPerQty;
-      }
-      // Clear menu fields if switching to On Quantity
-      config.supportOptions = undefined;
-    } else if (config.donationType === 'Menu') {
+      // On Quantity can use either single quantity/amountPerQty OR supportOptions (multiple tiers)
       if (supportOptions !== undefined) {
+        // Using supportOptions for multiple quantity tiers
         if (!Array.isArray(supportOptions) || supportOptions.length === 0) {
           return res.status(400).json({ 
             success: false,
@@ -897,10 +922,87 @@ async function updateSpecialCategoryConfig(req, res) {
           }
         }
         config.supportOptions = supportOptions;
+        // Clear single quantity fields when using supportOptions
+        config.quantity = undefined;
+        config.amountPerQty = undefined;
+      } else {
+        // Using single quantity/amountPerQty
+        if (quantity !== undefined) {
+          if (quantity <= 0) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'quantity must be greater than 0' 
+            });
+          }
+          config.quantity = quantity;
+        }
+        if (amountPerQty !== undefined) {
+          if (amountPerQty < 0) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'amountPerQty must be non-negative' 
+            });
+          }
+          config.amountPerQty = amountPerQty;
+        }
+        // Clear supportOptions when using single quantity
+        if (quantity !== undefined || amountPerQty !== undefined) {
+          config.supportOptions = undefined;
+        }
       }
-      // Clear quantity fields if switching to Menu
-      config.quantity = undefined;
-      config.amountPerQty = undefined;
+    } else if (config.donationType === 'Menu') {
+      // Menu can use either single quantity/amountPerQty OR supportOptions (multiple tiers)
+      if (supportOptions !== undefined) {
+        // Using supportOptions for multiple tiers
+        if (!Array.isArray(supportOptions) || supportOptions.length === 0) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'supportOptions must be a non-empty array' 
+          });
+        }
+        for (const option of supportOptions) {
+          if (!option.name || option.amount === undefined) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'Each support option must have name and amount' 
+            });
+          }
+          if (option.amount < 0) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'Support option amount must be non-negative' 
+            });
+          }
+        }
+        config.supportOptions = supportOptions;
+        // Clear single quantity fields when using supportOptions
+        config.quantity = undefined;
+        config.amountPerQty = undefined;
+      } else {
+        // Using single quantity/amountPerQty
+        if (quantity !== undefined) {
+          if (quantity <= 0) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'quantity must be greater than 0' 
+            });
+          }
+          config.quantity = quantity;
+        }
+        if (amountPerQty !== undefined) {
+          if (amountPerQty < 0) {
+            return res.status(400).json({ 
+              success: false,
+              message: 'amountPerQty must be non-negative' 
+            });
+          }
+          config.amountPerQty = amountPerQty;
+        }
+        // Clear supportOptions when using single quantity
+        if (quantity !== undefined || amountPerQty !== undefined) {
+          config.supportOptions = undefined;
+        }
+      }
     }
 
     // Update category remarks if provided
@@ -1130,6 +1232,100 @@ async function toggleCategoryStatus(req, res) {
   }
 }
 
+// Get specific trust category configuration by categoryType, categoryId, and trustId
+async function getTrustCategoryConfigByDetails(req, res) {
+  try {
+    const { categoryType, categoryId, trustId } = req.query;
+
+    // Validate required parameters
+    if (!categoryType || !categoryId || !trustId) {
+      return res.status(400).json({
+        success: false,
+        message: 'categoryType, categoryId, and trustId are required'
+      });
+    }
+
+    // Validate categoryType
+    if (!['Normal', 'Special'].includes(categoryType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'categoryType must be either "Normal" or "Special"'
+      });
+    }
+
+    // Validate ObjectId formats
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid categoryId format'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(trustId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid trustId format'
+      });
+    }
+
+    // Find the configuration
+    const config = await TrustCategoryConfig.findOne({
+      categoryId: categoryId,
+      trustId: trustId,
+      type: categoryType
+    }).populate('categoryId', 'name icon')
+      .populate('trustId', 'trustName adminName email');
+
+    if (!config) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category configuration not found for the provided details'
+      });
+    }
+
+    // Format response with all configuration details
+    const configDetails = {
+      _id: config._id,
+      categoryId: {
+        _id: config.categoryId._id,
+        name: config.categoryId.name,
+        icon: config.categoryId.icon
+      },
+      trustId: {
+        _id: config.trustId._id,
+        trustName: config.trustId.trustName,
+        adminName: config.trustId.adminName,
+        email: config.trustId.email
+      },
+      type: config.type,
+      donationType: config.donationType,
+      // For "On Price" donation type
+      minAmount: config.minAmount || null,
+      maxAmount: config.maxAmount || null,
+      // For "On Quantity" donation type
+      quantity: config.quantity || null,
+      amountPerQty: config.amountPerQty || null,
+      // For "Menu" donation type (Special category)
+      supportOptions: config.supportOptions || [],
+      categoryRemarks: config.categoryRemarks || '',
+      status: config.status,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt
+    };
+
+    res.status(200).json({
+      success: true,
+      config: configDetails
+    });
+  } catch (err) {
+    console.error('Error fetching trust category config by details:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+}
+
 module.exports = {
   createCategory,
   getCategories,
@@ -1143,6 +1339,7 @@ module.exports = {
   createSpecialCategoryConfig,
   saveCategoryConfigurations,
   getTrustCategoryConfigs,
+  getTrustCategoryConfigByDetails,
   getTrustsByCategoryConfigs,
   updateNormalCategoryConfig,
   updateSpecialCategoryConfig,

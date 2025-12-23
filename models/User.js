@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
   default: 'User'
 },
   supportedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Array of user IDs who support this user/trust
+  fcmToken: { type: String, required: false }, // Firebase Cloud Messaging token for push notifications
   createdAt: { type: Date, default: Date.now }
 });
 

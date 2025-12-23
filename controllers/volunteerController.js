@@ -2,6 +2,7 @@ const Volunteer = require('../models/Volunteer');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const { sendMail } = require('../config/mailer');
+const { sendNotificationToUser } = require('../services/notificationService');
 
 // Helper: Send email when volunteer submits request
 async function sendVolunteerSubmissionEmail(volunteerEmail, volunteerName, trustName) {
@@ -269,6 +270,42 @@ exports.joinVolunteer = async (req, res) => {
             console.error('Error sending volunteer submission email:', err);
             // Don't fail the request if email fails
         }
+
+        // Send push notification to volunteer (don't block response if notification fails)
+        try {
+            if (userId) {
+                await sendNotificationToUser(
+                    userId,
+                    'Volunteer Request Submitted',
+                    `Your volunteer request to ${trustName} has been submitted and is under review.`,
+                    {
+                        type: 'volunteer_submission',
+                        volunteerId: volunteer._id.toString(),
+                        trustId: trust.toString()
+                    }
+                );
+            }
+        } catch (err) {
+            console.error('Error sending volunteer submission notification:', err);
+            // Don't fail the request if notification fails
+        }
+
+        // Send push notification to trust admin (don't block response if notification fails)
+        try {
+            await sendNotificationToUser(
+                trust,
+                'New Volunteer Request',
+                `${fullName} has submitted a volunteer request.`,
+                {
+                    type: 'new_volunteer_request',
+                    volunteerId: volunteer._id.toString(),
+                    userId: userId ? userId.toString() : null
+                }
+            );
+        } catch (err) {
+            console.error('Error sending notification to trust:', err);
+            // Don't fail the request if notification fails
+        }
         
         const remainingRequests = 5 - (existingRequestsCount + 1);
         res.status(201).json({ 
@@ -450,6 +487,39 @@ exports.updateVolunteerStatus = async (req, res) => {
         } catch (err) {
             console.error('Error sending volunteer status email:', err);
             // Don't fail the request if email fails
+        }
+
+        // Send push notification to volunteer based on status (don't block response if notification fails)
+        try {
+            if (user && user._id) {
+                const trustName = trust?.trustName || 'the Trust';
+                if (status === 'approved') {
+                    await sendNotificationToUser(
+                        user._id,
+                        'Volunteer Request Approved',
+                        `Congratulations! Your volunteer request to ${trustName} has been approved.`,
+                        {
+                            type: 'volunteer_approved',
+                            volunteerId: volunteer._id.toString(),
+                            trustId: trust?._id?.toString() || null
+                        }
+                    );
+                } else if (status === 'rejected') {
+                    await sendNotificationToUser(
+                        user._id,
+                        'Volunteer Request Update',
+                        `Your volunteer request to ${trustName} has been ${status}.`,
+                        {
+                            type: 'volunteer_rejected',
+                            volunteerId: volunteer._id.toString(),
+                            trustId: trust?._id?.toString() || null
+                        }
+                    );
+                }
+            }
+        } catch (err) {
+            console.error('Error sending volunteer status notification:', err);
+            // Don't fail the request if notification fails
         }
 
         res.status(200).json({ 

@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cors = require('cors');
+require('./config/firebase'); // Initialize Firebase Admin SDK
 const fs = require('fs');
 const path = require('path'); 
 const authRoutes = require('./routes/authRoutes');
@@ -18,6 +19,7 @@ const distributionRequestRoutes = require('./routes/distributionRequestRoutes');
 const emergencyRoutes = require('./routes/emergencyRoutes');
 const missingPersonRoutes = require('./routes/missingPersonRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const app = express();
 
 // CORS configuration - Allow all origins from everywhere
@@ -60,6 +62,7 @@ app.use('/api/distribution-requests', distributionRequestRoutes);
 app.use('/api', emergencyRoutes);
 app.use('/api', missingPersonRoutes);
 app.use('/api', campaignRoutes);
+app.use('/api', notificationRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
