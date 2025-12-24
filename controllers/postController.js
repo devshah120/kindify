@@ -1,6 +1,7 @@
 const Post = require('../models/Post');
 const { deleteFromCloudinary } = require('../config/cloudinary');
 const User = require('../models/User');
+const { sendNotificationToRole } = require('../services/notificationService');
 
 // Create Post
 exports.createPost = async (req, res) => {
@@ -30,6 +31,29 @@ exports.createPost = async (req, res) => {
       categoryId: categoryId || null,  // category ID (optional)
       createdBy: req.user.id
     });
+
+    // Get creator info for notification
+    const creator = await User.findById(req.user.id).select('trustName adminName name role');
+    const creatorName = creator.role === 'Trust' ? creator.trustName : creator.name;
+
+    // Send notification to all users (not Trust) about the new post
+    try {
+      await sendNotificationToRole(
+        'User', // Only send to users with role "User", not "Trust"
+        'New Post Available! 🎉',
+        `${creatorName} shared a new post: ${creator.trustName ?? creator.name}`,
+        {
+          type: 'new_post',
+          postId: newPost._id.toString(),
+          creatorName: creatorName,
+          location: location
+        }
+      );
+      console.log(`✅ Notification sent to all users about new post: ${newPost._id}`);
+    } catch (notificationError) {
+      // Log error but don't fail the post creation
+      console.error('❌ Error sending post notification:', notificationError);
+    }
 
     res.status(201).json({
       message: 'Post created successfully',
