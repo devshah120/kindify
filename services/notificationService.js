@@ -14,9 +14,10 @@ async function sendNotificationToDevice(fcmToken, title, body, data = {}) {
     throw new Error('FCM token is required');
   }
 
-  if (!admin.apps.length) {
-    console.warn('Firebase not initialized. Skipping notification.');
-    return { success: false, error: 'Firebase not initialized' };
+  if (!admin.apps.length || !admin.isInitialized) {
+    const errorMsg = 'Firebase Admin SDK is not initialized. Please configure FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_PATH in your .env file. See FIREBASE_SETUP_QUICK.md for instructions.';
+    console.error('❌', errorMsg);
+    return { success: false, error: errorMsg };
   }
 
   const message = {
