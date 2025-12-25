@@ -1,7 +1,7 @@
 const Post = require('../models/Post');
 const { deleteFromCloudinary } = require('../config/cloudinary');
 const User = require('../models/User');
-const { sendNotificationToRole } = require('../services/notificationService');
+const { sendNotificationToRole, sendNotificationToUser } = require('../services/notificationService');
 
 // Create Post
 exports.createPost = async (req, res) => {
@@ -186,12 +186,37 @@ exports.likePost = async (req, res) => {
       return res.status(400).json({ message: 'Post ID is required' });
     }
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate('createdBy', 'trustName adminName name role _id');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    if (!post.likedBy.includes(userId)) {
+    const wasAlreadyLiked = post.likedBy.includes(userId);
+    
+    if (!wasAlreadyLiked) {
       post.likedBy.push(userId);
       await post.save();
+
+      // Send notification to Trust when user likes their post (only if Trust created it)
+      if (post.createdBy && post.createdBy.role === 'Trust' && post.createdBy._id) {
+        try {
+          const user = await User.findById(userId).select('name trustName adminName role');
+          const userName = user?.name || 'Someone';
+          
+          await sendNotificationToUser(
+            post.createdBy._id,
+            'Your Post Got a Like! ❤️',
+            `${userName} liked your post: ${post.name}`,
+            {
+              type: 'post_liked',
+              postId: post._id.toString(),
+              userId: userId.toString(),
+              userName: userName
+            }
+          );
+          console.log(`✅ Notification sent to Trust about post like: ${post._id}`);
+        } catch (notificationError) {
+          console.error('❌ Error sending post like notification:', notificationError);
+        }
+      }
     }
 
     res.json({ success: true, message: 'Post liked successfully', totalLikes: post.likedBy.length });
@@ -234,12 +259,37 @@ exports.savePost = async (req, res) => {
       return res.status(400).json({ message: 'Post ID is required' });
     }
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate('createdBy', 'trustName adminName name role _id');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    if (!post.savedBy.includes(userId)) {
+    const wasAlreadySaved = post.savedBy.includes(userId);
+    
+    if (!wasAlreadySaved) {
       post.savedBy.push(userId);
       await post.save();
+
+      // Send notification to Trust when user saves their post (only if Trust created it)
+      if (post.createdBy && post.createdBy.role === 'Trust' && post.createdBy._id) {
+        try {
+          const user = await User.findById(userId).select('name trustName adminName role');
+          const userName = user?.name || 'Someone';
+          
+          await sendNotificationToUser(
+            post.createdBy._id,
+            'Your Post Was Saved! 🔖',
+            `${userName} saved your post: ${post.name}`,
+            {
+              type: 'post_saved',
+              postId: post._id.toString(),
+              userId: userId.toString(),
+              userName: userName
+            }
+          );
+          console.log(`✅ Notification sent to Trust about post save: ${post._id}`);
+        } catch (notificationError) {
+          console.error('❌ Error sending post save notification:', notificationError);
+        }
+      }
     }
 
     res.json({ success: true, message: 'Post saved successfully', totalSaves: post.savedBy.length });

@@ -1,5 +1,7 @@
 const Story = require('../models/Story');
 const { deleteFromCloudinary } = require('../config/cloudinary');
+const User = require('../models/User');
+const { sendNotificationToRole } = require('../services/notificationService');
 
 exports.createStory = async (req, res) => {
   try {
@@ -26,6 +28,27 @@ exports.createStory = async (req, res) => {
 
     // Save the story to the database
     await newStory.save();
+
+    // Get creator info for notification
+    const creator = await User.findById(req.user.id).select('trustName adminName name role');
+    const creatorName = creator.role === 'Trust' ? creator.trustName : creator.name;
+
+    // Send notification to all users about the new story
+    try {
+      await sendNotificationToRole(
+        'User', // Only send to users with role "User", not "Trust"
+        'New Story Available! 📖',
+        `${creatorName} shared a new story: ${title}`,
+        {
+          type: 'new_story',
+          storyId: newStory._id.toString(),
+          creatorName: creatorName
+        }
+      );
+      console.log(`✅ Notification sent to all users about new story: ${newStory._id}`);
+    } catch (notificationError) {
+      console.error('❌ Error sending story notification:', notificationError);
+    }
 
     res.status(201).json({
       success: true,

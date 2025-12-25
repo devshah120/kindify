@@ -1,5 +1,7 @@
 const Campaign = require('../models/Campaign');
 const mongoose = require('mongoose');
+const User = require('../models/User');
+const { sendNotificationToRole } = require('../services/notificationService');
 
 // POST /api/campaigns - Create a new campaign
 exports.createCampaign = async (req, res) => {
@@ -72,6 +74,28 @@ exports.createCampaign = async (req, res) => {
     // Populate creator and category info
     await campaign.populate('createdBy', 'email role trustName adminName name');
     await campaign.populate('category', 'name icon');
+
+    // Get creator info for notification
+    const creator = campaign.createdBy;
+    const creatorName = creator.role === 'Trust' ? creator.trustName : creator.name;
+
+    // Send notification to all users about the new campaign
+    try {
+      await sendNotificationToRole(
+        'User', // Only send to users with role "User", not "Trust"
+        'New Campaign Launched! 🎯',
+        `${creatorName} launched a new campaign: ${campaignTitle}`,
+        {
+          type: 'new_campaign',
+          campaignId: campaign._id.toString(),
+          campaignTitle: campaignTitle,
+          creatorName: creatorName
+        }
+      );
+      console.log(`✅ Notification sent to all users about new campaign: ${campaign._id}`);
+    } catch (notificationError) {
+      console.error('❌ Error sending campaign notification:', notificationError);
+    }
 
     res.status(201).json({
       message: 'Campaign created successfully',

@@ -1,5 +1,7 @@
 const DistributionRequest = require('../models/DistributionRequest');
 const { deleteFromCloudinary } = require('../config/cloudinary');
+const User = require('../models/User');
+const { sendNotificationToUser } = require('../services/notificationService');
 
 // Create a new distribution request
 exports.createDistributionRequest = async (req, res) => {
@@ -55,6 +57,33 @@ exports.createDistributionRequest = async (req, res) => {
     // Populate category and user details
     await distributionRequest.populate('categoryId', 'name');
     await distributionRequest.populate('userId', 'name email');
+
+    // Get user info for notification
+    const user = await User.findById(userId).select('name email');
+    const userName = user?.name || 'User';
+
+    // Find trust admin to notify (if trustName is provided, find the trust)
+    try {
+      if (trustName) {
+        const trust = await User.findOne({ trustName: trustName, role: 'Trust' }).select('_id trustName');
+        if (trust) {
+          await sendNotificationToUser(
+            trust._id,
+            'New Distribution Request',
+            `${userName} has submitted a distribution request for ${requiredItem}`,
+            {
+              type: 'distribution_request_created',
+              requestId: distributionRequest._id.toString(),
+              userId: userId,
+              requiredItem: requiredItem
+            }
+          );
+          console.log(`✅ Notification sent to trust about distribution request: ${distributionRequest._id}`);
+        }
+      }
+    } catch (notificationError) {
+      console.error('❌ Error sending distribution request notification:', notificationError);
+    }
 
     res.status(201).json({ 
       success: true, 
@@ -135,6 +164,32 @@ exports.updateDistributionRequest = async (req, res) => {
         success: false, 
         message: 'Distribution request not found' 
       });
+    }
+
+    // Send notification to user about status update
+    if (status && request.userId && request.userId._id) {
+      try {
+        const statusMessage = status === 'approved' 
+          ? 'Your distribution request has been approved! ✅'
+          : status === 'rejected'
+          ? 'Your distribution request has been rejected.'
+          : `Your distribution request status has been updated to: ${status}`;
+
+        await sendNotificationToUser(
+          request.userId._id,
+          'Distribution Request Update',
+          statusMessage,
+          {
+            type: 'distribution_request_updated',
+            requestId: request._id.toString(),
+            status: status,
+            requiredItem: request.requiredItem
+          }
+        );
+        console.log(`✅ Notification sent to user about distribution request update: ${request._id}`);
+      } catch (notificationError) {
+        console.error('❌ Error sending distribution request update notification:', notificationError);
+      }
     }
 
     res.status(200).json({ 

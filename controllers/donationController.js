@@ -1,5 +1,7 @@
 // donationController.js
 const Donation = require('../models/Donation');
+const User = require('../models/User');
+const { sendNotificationToRole, sendNotificationToUser } = require('../services/notificationService');
 
 // Create a new donation
 exports.createDonation = async (req, res) => {
@@ -17,6 +19,30 @@ exports.createDonation = async (req, res) => {
     });
 
     await donation.save();
+    
+    // Populate trust info for notification
+    await donation.populate('trustId', 'trustName');
+    
+    // Send notification to all users about new donation opportunity
+    if (donation.trustId && donation.trustId.trustName) {
+      try {
+        await sendNotificationToRole(
+          'User', // Only send to users with role "User", not "Trust"
+          'New Donation Opportunity! 💝',
+          `${donation.trustId.trustName} has a new donation opportunity`,
+          {
+            type: 'new_donation',
+            donationId: donation._id.toString(),
+            trustName: donation.trustId.trustName,
+            trustId: trustId
+          }
+        );
+        console.log(`✅ Notification sent to all users about new donation: ${donation._id}`);
+      } catch (notificationError) {
+        console.error('❌ Error sending donation notification:', notificationError);
+      }
+    }
+    
     res.status(201).json({ success: true, donation });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });

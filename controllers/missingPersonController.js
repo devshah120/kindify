@@ -1,4 +1,6 @@
 const MissingPerson = require('../models/MissingPerson');
+const User = require('../models/User');
+const { sendNotificationToRole } = require('../services/notificationService');
 
 // POST /api/missing-persons - Create a new missing person report
 exports.createMissingPerson = async (req, res) => {
@@ -63,6 +65,28 @@ exports.createMissingPerson = async (req, res) => {
 
     // Populate creator info
     await missingPerson.populate('createdBy', 'email role trustName adminName name');
+
+    // Get creator info for notification
+    const creator = missingPerson.createdBy;
+    const creatorName = creator.role === 'Trust' ? creator.trustName : creator.name;
+
+    // Send notification to all users about the missing person report
+    try {
+      await sendNotificationToRole(
+        'User', // Only send to users with role "User", not "Trust"
+        'Missing Person Alert! 🚨',
+        `Help find ${fullName} - Missing person report by ${creatorName}`,
+        {
+          type: 'missing_person_created',
+          missingPersonId: missingPerson._id.toString(),
+          fullName: fullName,
+          creatorName: creatorName
+        }
+      );
+      console.log(`✅ Notification sent to all users about missing person: ${missingPerson._id}`);
+    } catch (notificationError) {
+      console.error('❌ Error sending missing person notification:', notificationError);
+    }
 
     res.status(201).json({
       message: 'Missing person report created successfully',

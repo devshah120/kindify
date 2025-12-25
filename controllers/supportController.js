@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { sendNotificationToUser } = require('../services/notificationService');
 
 // Support a user/trust (Follow) - Same logic as save/unsave
 exports.supportUser = async (req, res) => {
@@ -27,6 +28,28 @@ exports.supportUser = async (req, res) => {
     }
     trustUser.supportedBy.push(userId);
     await trustUser.save();
+
+    // Get supporter info
+    const supporter = await User.findById(userId).select('name trustName adminName role');
+    const supporterName = supporter.role === 'Trust' ? supporter.trustName : supporter.name;
+    const trustUserName = trustUser.role === 'Trust' ? trustUser.trustName : trustUser.name;
+
+    // Send notification to the trust/user being supported
+    try {
+      await sendNotificationToUser(
+        trustId,
+        'New Supporter! 🎉',
+        `${supporterName} started supporting you`,
+        {
+          type: 'new_supporter',
+          supporterId: userId.toString(),
+          supporterName: supporterName
+        }
+      );
+      console.log(`✅ Notification sent to ${trustUserName} about new supporter: ${supporterName}`);
+    } catch (notificationError) {
+      console.error('❌ Error sending supporter notification:', notificationError);
+    }
 
     res.status(200).json({
       success: true,
