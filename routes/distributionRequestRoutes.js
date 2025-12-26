@@ -16,7 +16,7 @@ router.get('/', distributionRequestController.getAllDistributionRequests);
 // Get distribution request by ID
 router.get('/:id', distributionRequestController.getDistributionRequestById);
 
-// Get all requests by a specific user
+// Get all distribution requests by a specific user
 router.get('/user/:userId', distributionRequestController.getUserDistributionRequests);
 
 // Update distribution request (status, remarks)

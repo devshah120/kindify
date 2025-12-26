@@ -68,20 +68,38 @@ exports.createPost = async (req, res) => {
 // Get Posts with likes and saves info
 exports.getPosts = async (req, res) => {
   try {
-    let { page = 1, limit = 10, query } = req.query;
+    let { page = 1, limit = 10, query, trustId } = req.query;
 
     page = parseInt(page);
     limit = parseInt(limit);
     const skip = (page - 1) * limit;
 
     let filter = {};
+    
+    // Filter by trustId/userId if provided
+    if (trustId) {
+      filter.createdBy = trustId;
+    }
+    
+    // Add search query filter (combines with trustId filter if both are provided)
     if (query) {
-      filter = {
+      const searchFilter = {
         $or: [
           { name: { $regex: query, $options: 'i' } },
           { location: { $regex: query, $options: 'i' } }
         ]
       };
+      // If trustId is also provided, use $and to combine both filters
+      if (trustId) {
+        filter = {
+          $and: [
+            { createdBy: trustId },
+            searchFilter
+          ]
+        };
+      } else {
+        filter = searchFilter;
+      }
     }
 
     const posts = await Post.find(filter)
@@ -89,7 +107,7 @@ exports.getPosts = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('createdBy', 'trustName adminName name email role')  // Populate creator info
+      .populate('createdBy', 'trustName adminName name email role profilePhoto')  // Populate creator info
       .populate('categoryId', 'name icon')  // Populate category info
       .populate('likedBy', '_id name trustName adminName')   // Populate likedBy user info
       .populate('savedBy', '_id name trustName adminName');  // Populate savedBy user info
@@ -144,7 +162,8 @@ exports.getPosts = async (req, res) => {
           id: post.createdBy._id,
           name: creatorName,
           email: post.createdBy.email,
-          role: post.createdBy.role
+          role: post.createdBy.role,
+          profilePhoto: post.createdBy.profilePhoto || null
         },
         isSupporting: isSupporting,  // Boolean: true if current user is supporting this creator
         supportedBy: supportedBy,  // Array of user IDs who support this creator
@@ -338,7 +357,7 @@ exports.getSavedPosts = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('createdBy', 'trustName adminName name email role')
+      .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .populate('categoryId', 'name icon')
       .populate('likedBy', '_id name trustName adminName')
       .populate('savedBy', '_id name trustName adminName');
@@ -392,7 +411,8 @@ exports.getSavedPosts = async (req, res) => {
           id: post.createdBy._id,
           name: creatorName,
           email: post.createdBy.email,
-          role: post.createdBy.role
+          role: post.createdBy.role,
+          profilePhoto: post.createdBy.profilePhoto || null
         },
         isSupporting: isSupporting,  // Boolean: true if current user is supporting this creator
         supportedBy: supportedBy,  // Array of user IDs who support this creator
@@ -456,6 +476,108 @@ exports.deletePost = async (req, res) => {
   }
 };
 
+// Get My Posts (Trust can see their own created posts only)
+exports.getMyPosts = async (req, res) => {
+  try {
+    let { page = 1, limit = 10 } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const skip = (page - 1) * limit;
+
+    // Filter posts created by the authenticated user
+    const filter = { createdBy: req.user.id };
+
+    const posts = await Post.find(filter)
+      .select('name location pictures categoryId likedBy savedBy createdBy createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('createdBy', 'trustName adminName name email role profilePhoto')
+      .populate('categoryId', 'name icon')
+      .populate('likedBy', '_id name trustName adminName')
+      .populate('savedBy', '_id name trustName adminName');
+
+    const totalPosts = await Post.countDocuments(filter);
+
+    // Get support relationships for current user
+    const userId = req.user.id;
+    let supportMap = {};
+    let creatorSupportersMap = {};
+    
+    if (posts.length > 0) {
+      const creatorIds = posts
+        .filter(post => post.createdBy && post.createdBy._id)
+        .map(post => post.createdBy._id.toString());
+      
+      if (creatorIds.length > 0) {
+        const creators = await User.find({ _id: { $in: creatorIds } })
+          .select('_id supportedBy');
+        
+        creators.forEach(creator => {
+          const creatorIdStr = creator._id.toString();
+          creatorSupportersMap[creatorIdStr] = creator.supportedBy || [];
+          
+          if (creator.supportedBy && creator.supportedBy.includes(userId)) {
+            supportMap[creatorIdStr] = true;
+          }
+        });
+      }
+    }
+
+    const postsWithCounts = posts.map(post => {
+      const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
+      const creatorId = post.createdBy._id.toString();
+      const isSupporting = !!supportMap[creatorId];
+      const supportedBy = creatorSupportersMap[creatorId] || [];
+      
+      return {
+        _id: post._id,
+        name: creatorName,
+        postTitle: post.name,
+        location: post.location,
+        pictures: post.pictures,
+        categoryId: post.categoryId ? {
+          _id: post.categoryId._id,
+          name: post.categoryId.name,
+          icon: post.categoryId.icon
+        } : null,
+        createdBy: {
+          id: post.createdBy._id,
+          name: creatorName,
+          email: post.createdBy.email,
+          role: post.createdBy.role,
+          profilePhoto: post.createdBy.profilePhoto || null
+        },
+        isSupporting: isSupporting,
+        supportedBy: supportedBy,
+        totalSupporters: supportedBy.length,
+        createdAt: post.createdAt,
+        likedBy: post.likedBy,
+        savedBy: post.savedBy,
+        totalLikes: post.likedBy.length,
+        totalSaves: post.savedBy.length
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
+      posts: postsWithCounts
+    });
+
+  } catch (error) {
+    console.error('Error fetching my posts:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Search posts
 exports.searchPosts = async (req, res) => {
   try {
@@ -484,7 +606,7 @@ exports.searchPosts = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
-      .populate('createdBy', 'trustName adminName name email role')
+      .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .populate('categoryId', 'name icon')
       .populate('likedBy', '_id name trustName adminName')
       .populate('savedBy', '_id name trustName adminName');
@@ -536,7 +658,8 @@ exports.searchPosts = async (req, res) => {
           id: post.createdBy._id,
           name: creatorName,
           email: post.createdBy.email,
-          role: post.createdBy.role
+          role: post.createdBy.role,
+          profilePhoto: post.createdBy.profilePhoto || null
         },
         isSupporting: isSupporting,
         supportedBy: supportedBy,

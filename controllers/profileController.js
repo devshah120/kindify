@@ -232,3 +232,73 @@ exports.editProfile = async (req, res) => {
   }
 };
 
+// Get all users with "User" role
+exports.getAllUsers = async (req, res) => {
+  try {
+    let { page = 1, limit = 10, search } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const skip = (page - 1) * limit;
+
+    // Build query for users with "User" role
+    let query = { role: 'User' };
+
+    // Add search functionality if search query is provided
+    if (search && search.trim() !== '') {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { mobile: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+        { state: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Fetch users with pagination
+    const users = await User.find(query)
+      .select('name email mobile phone profilePhoto designation address state city pincode fullAddress role createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Get total count for pagination
+    const totalUsers = await User.countDocuments(query);
+
+    // Format user data
+    const formattedUsers = users.map(user => ({
+      id: user._id,
+      name: user.name || 'User',
+      email: user.email,
+      mobile: user.mobile || null,
+      phone: user.phone || null,
+      profilePhoto: user.profilePhoto || null,
+      designation: user.designation || null,
+      address: user.address || null,
+      state: user.state || null,
+      city: user.city || null,
+      pincode: user.pincode || null,
+      fullAddress: user.fullAddress || null,
+      role: user.role,
+      createdAt: user.createdAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalUsers / limit),
+      totalUsers,
+      users: formattedUsers
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+

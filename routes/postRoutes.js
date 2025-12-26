@@ -28,6 +28,7 @@ const handleMulterError = (err, req, res, next) => {
 // Create a new post with multiple image uploads (similar to story but supports multiple images)
 router.post('/posts', auth, uploadPostImages.array('images', 10), handleMulterError, postController.createPost);
 router.get('/posts', auth, postController.getPosts);
+router.get('/posts/my-posts', auth, postController.getMyPosts);
 router.get('/posts/saved', auth, postController.getSavedPosts);
 router.post('/post/like', auth, postController.likePost);
 router.post('/post/unlike', auth, postController.unlikePost);
