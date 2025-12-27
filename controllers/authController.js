@@ -7,6 +7,9 @@ const upload = require('../config/multer');
 
 const OTP_EXPIRE_SECONDS = parseInt(process.env.OTP_EXPIRE_SECONDS || '300', 10);
 
+// Superadmin email - has Trust role but receives OTP and gets Admin privileges
+const SUPERADMIN_EMAIL = 'bondbytetechnology@gmail.com';
+
 // helper: send OTP email
 async function sendOtpEmail(toEmail, otp, userName) {
   const subject = 'Your OTP code';
@@ -270,7 +273,17 @@ if (!user) {
   if (role === 'User') {
     user = await User.create({ email, role: 'User' });
   } else if (role === 'Trust') {
-    return res.status(400).json({ message: 'Please register first as Trust' });
+    // Auto-create superadmin user if email matches
+    if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+      user = await User.create({ 
+        email, 
+        role: 'Trust',
+        trustName: 'BondByte Technology',
+        adminName: 'Super Admin'
+      });
+    } else {
+      return res.status(400).json({ message: 'Please register first as Trust' });
+    }
   } else {
     return res.status(400).json({ message: 'Invalid role' });
   }
@@ -282,7 +295,8 @@ if (!user) {
 }
 
   // For Trust role, return static OTP message instead of sending email
-  if (user.role === 'Trust') {
+  // Exception: superadmin email receives OTP via email
+  if (user.role === 'Trust' && user.email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
     const STATIC_OTP = process.env.STATIC_OTP_TRUST || '111111';
     return res.json({ 
       message: `Use static OTP: ${STATIC_OTP}`,
@@ -290,7 +304,7 @@ if (!user) {
     });
   }
 
-  // For User and other roles, generate and send OTP via email
+  // For User, Admin, and superadmin Trust email, generate and send OTP via email
   // Remove old OTPs for this email
   await Otp.deleteMany({ email: user.email });
 
@@ -322,13 +336,14 @@ exports.verifyLogin = async (req, res) => {
   }
 
   // Check if user is Trust role - use static OTP
-  if (user.role === 'Trust') {
+  // Exception: superadmin email uses OTP from database
+  if (user.role === 'Trust' && user.email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
     const STATIC_OTP = process.env.STATIC_OTP_TRUST || '111111';
     if (otp !== STATIC_OTP) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
   } else {
-    // For User and other roles, verify OTP from database
+    // For User, Admin, and superadmin Trust email, verify OTP from database
     const record = await Otp.findOne({ email, otp });
     if (!record) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
@@ -338,7 +353,13 @@ exports.verifyLogin = async (req, res) => {
   }
 
   // Create JWT
-  const payload = { id: user._id, email: user.email, role: user.role };
+  // Superadmin email gets Admin role in JWT even though user.role is Trust
+  let jwtRole = user.role;
+  if (user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase() && user.role === 'Trust') {
+    jwtRole = 'Admin';
+  }
+  
+  const payload = { id: user._id, email: user.email, role: jwtRole };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
   // Send welcome email after successful login (don't block response if email fails)
@@ -353,7 +374,7 @@ exports.verifyLogin = async (req, res) => {
   return res.json({
     message: 'Login successful',
     token,
-    user: { id: user._id, email: user.email, role: user.role }
+    user: { id: user._id, email: user.email, role: jwtRole }
   });
 };
 
