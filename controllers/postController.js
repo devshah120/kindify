@@ -690,3 +690,51 @@ exports.searchPosts = async (req, res) => {
     });
   }
 };
+
+// Get users who liked a post by post ID
+exports.getPostLikes = async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    if (!postId) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Post ID is required' 
+      });
+    }
+
+    const post = await Post.findById(postId)
+      .populate('likedBy', '_id name trustName adminName email role profilePhoto');
+
+    if (!post) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Post not found' 
+      });
+    }
+
+    // Format the likedBy users
+    const likedByUsers = post.likedBy.map(user => ({
+      _id: user._id,
+      name: user.role === 'Trust' ? user.trustName || user.adminName : user.name,
+      email: user.email,
+      role: user.role,
+      profilePhoto: user.profilePhoto || null
+    }));
+
+    res.status(200).json({
+      success: true,
+      postId: post._id,
+      totalLikes: post.likedBy.length,
+      likedBy: likedByUsers
+    });
+
+  } catch (error) {
+    console.error('Error fetching post likes:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
