@@ -31,6 +31,38 @@ exports.submitContact = async (req, res) => {
                 console.error('❌ Error sending contact notification:', notificationError);
             }
         }
+
+        // Send notification to user confirming their message was sent
+        try {
+            // Find user by email to send confirmation notification
+            const user = await User.findOne({ email: email.toLowerCase().trim() });
+            if (user && user._id) {
+                // Get trust name for the notification
+                let trustName = 'the Trust';
+                if (trust && mongoose.Types.ObjectId.isValid(trust)) {
+                    const trustUser = await User.findById(trust).select('trustName');
+                    if (trustUser && trustUser.trustName) {
+                        trustName = trustUser.trustName;
+                    }
+                }
+
+                await sendNotificationToUser(
+                    user._id,
+                    'Message Sent Successfully! ✅',
+                    `Your message to ${trustName} has been sent successfully. We'll get back to you soon!`,
+                    {
+                        type: 'contact_message_confirmation',
+                        contactId: contact._id.toString(),
+                        trustId: trust,
+                        trustName: trustName
+                    }
+                );
+                console.log(`✅ Notification sent to user confirming contact message: ${contact._id}`);
+            }
+        } catch (userNotificationError) {
+            // Don't fail the request if user notification fails (user might not be registered)
+            console.error('❌ Error sending user confirmation notification:', userNotificationError);
+        }
         
         res.status(201).json({ success: true, message: "Your message has been sent successfully." });
     } catch (error) {

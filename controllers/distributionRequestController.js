@@ -62,6 +62,24 @@ exports.createDistributionRequest = async (req, res) => {
     const user = await User.findById(userId).select('name email');
     const userName = user?.name || 'User';
 
+    // Send notification to user confirming their request was submitted
+    try {
+      await sendNotificationToUser(
+        userId,
+        'Request Submitted Successfully! ✅',
+        `Your distribution request for ${requiredItem} has been submitted successfully. We'll review it and get back to you soon!`,
+        {
+          type: 'distribution_request_submitted',
+          requestId: distributionRequest._id.toString(),
+          requiredItem: requiredItem,
+          status: 'pending'
+        }
+      );
+      console.log(`✅ Notification sent to user confirming distribution request: ${distributionRequest._id}`);
+    } catch (userNotificationError) {
+      console.error('❌ Error sending user confirmation notification:', userNotificationError);
+    }
+
     // Find trust admin to notify (if trustName is provided, find the trust)
     try {
       if (trustName) {
