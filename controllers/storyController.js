@@ -1,6 +1,8 @@
 const Story = require('../models/Story');
 const { deleteFromCloudinary } = require('../config/cloudinary');
 const User = require('../models/User');
+const Post = require('../models/Post');
+const mongoose = require('mongoose');
 const { sendNotificationToRole } = require('../services/notificationService');
 
 exports.createStory = async (req, res) => {
@@ -67,8 +69,96 @@ exports.createStory = async (req, res) => {
 // Get all stories with optional filters (pagination, search, etc.)
 exports.getStories = async (req, res) => {
   try {
-    // Fetch all stories without any pagination or filtering
-    const stories = await Story.find({})
+    const { trustId } = req.query;
+
+    // Build filter
+    let filter = {};
+    
+    // If trustId is provided, filter stories by that trust
+    if (trustId) {
+      // Validate trustId format
+      if (!mongoose.Types.ObjectId.isValid(trustId)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Invalid trustId format' 
+        });
+      }
+
+      // Verify trust exists
+      const trust = await User.findById(trustId).select('_id role trustName adminName email profilePhoto designation city state address pincode darpanId supportedBy');
+      if (!trust) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Trust not found' 
+        });
+      }
+
+      if (trust.role !== 'Trust') {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Provided ID is not a Trust account' 
+        });
+      }
+
+      // Filter stories by this trust
+      filter.createdBy = trustId;
+
+      // Fetch stories for this trust
+      const stories = await Story.find(filter)
+        .select('_id title imageUrl isUserStory createdBy createdAt')
+        .populate('createdBy', 'trustName adminName name email role profilePhoto')
+        .sort({ createdAt: -1 });
+
+      // Format stories with user info
+      const formattedStories = stories.map(story => {
+        const creator = story.createdBy;
+        const creatorName = creator?.role === 'Trust' ? creator.trustName : creator?.name || 'Unknown';
+        
+        return {
+          _id: story._id,
+          title: story.title,
+          imageUrl: story.imageUrl,
+          isUserStory: story.isUserStory,
+          createdBy: creator ? {
+            _id: creator._id,
+            name: creatorName,
+            email: creator.email,
+            role: creator.role,
+            profilePhoto: creator.profilePhoto || null
+          } : null,
+          createdAt: story.createdAt
+        };
+      });
+
+      // Get trust details
+      const postCount = await Post.countDocuments({ createdBy: trustId });
+
+      return res.status(200).json({
+        success: true,
+        trustId: trustId,
+        trust: {
+          _id: trust._id,
+          trustName: trust.trustName,
+          adminName: trust.adminName,
+          email: trust.email,
+          role: trust.role,
+          profilePhoto: trust.profilePhoto || null,
+          designation: trust.designation || null,
+          city: trust.city || null,
+          state: trust.state || null,
+          address: trust.address || null,
+          pincode: trust.pincode || null,
+          darpanId: trust.darpanId || null,
+          totalSupporters: trust.supportedBy ? trust.supportedBy.length : 0,
+          postCount: postCount
+        },
+        totalStories: stories.length,
+        stories: formattedStories
+      });
+    }
+
+    // If no trustId, return all stories as before
+    const stories = await Story.find(filter)
       .select('_id title imageUrl isUserStory createdBy createdAt')
       .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .sort({ createdAt: -1 }); // Sort by creation date, most recent first
@@ -104,7 +194,7 @@ exports.getStories = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server error',
-      error: error.message 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

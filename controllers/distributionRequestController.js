@@ -56,7 +56,7 @@ exports.createDistributionRequest = async (req, res) => {
     
     // Populate category and user details
     await distributionRequest.populate('categoryId', 'name');
-    await distributionRequest.populate('userId', 'name email');
+    await distributionRequest.populate('userId', 'name email profilePhoto');
 
     // Get user info for notification
     const user = await User.findById(userId).select('name email');
@@ -120,15 +120,16 @@ exports.createDistributionRequest = async (req, res) => {
 // Get all distribution requests
 exports.getAllDistributionRequests = async (req, res) => {
   try {
-    const { status, userId } = req.query;
+    const { status, userId, trustName } = req.query;
     const filter = {};
     
     if (status) filter.status = status;
     if (userId) filter.userId = userId;
+    if (trustName) filter.trustName = trustName;
 
     const requests = await DistributionRequest.find(filter)
       .populate('categoryId', 'name')
-      .populate('userId', 'name email phone')
+      .populate('userId', 'name email phone profilePhoto')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ 
@@ -146,7 +147,7 @@ exports.getDistributionRequestById = async (req, res) => {
   try {
     const request = await DistributionRequest.findById(req.params.id)
       .populate('categoryId', 'name')
-      .populate('userId', 'name email phone');
+      .populate('userId', 'name email phone profilePhoto');
 
     if (!request) {
       return res.status(404).json({ 
@@ -175,7 +176,7 @@ exports.updateDistributionRequest = async (req, res) => {
       updateData, 
       { new: true, runValidators: true }
     ).populate('categoryId', 'name')
-     .populate('userId', 'name email phone');
+     .populate('userId', 'name email phone profilePhoto');
 
     if (!request) {
       return res.status(404).json({ 
@@ -253,6 +254,7 @@ exports.getUserDistributionRequests = async (req, res) => {
   try {
     const requests = await DistributionRequest.find({ userId: req.params.userId })
       .populate('categoryId', 'name')
+      .populate('userId', 'name email phone profilePhoto')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ 

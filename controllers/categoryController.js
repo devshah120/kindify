@@ -20,8 +20,95 @@ async function createSpecialCategory(req, res) {
 
 // Get All
 async function getCategories(req, res) {
-  const categories = await Category.find();
-  res.json(categories);
+  try {
+    const { trustId } = req.query;
+
+    // If trustId is provided, return categories with their config details for that trust
+    if (trustId) {
+      // Validate trustId format
+      if (!mongoose.Types.ObjectId.isValid(trustId)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Invalid trustId format' 
+        });
+      }
+
+      // Verify trust exists
+      const trust = await User.findById(trustId).select('_id role trustName');
+      if (!trust) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Trust not found' 
+        });
+      }
+
+      if (trust.role !== 'Trust') {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Provided ID is not a Trust account' 
+        });
+      }
+
+      // Get all categories
+      const allCategories = await Category.find();
+
+      // Get category configurations for this trust
+      const trustConfigs = await TrustCategoryConfig.find({ trustId: trustId })
+        .populate('categoryId', 'name icon')
+        .select('type status categoryId donationType minAmount maxAmount quantity amountPerQty supportOptions categoryRemarks');
+
+      // Create a map of categoryId to configs
+      const configMap = new Map();
+      trustConfigs.forEach(config => {
+        const categoryId = config.categoryId?._id?.toString();
+        if (categoryId) {
+          if (!configMap.has(categoryId)) {
+            configMap.set(categoryId, []);
+          }
+          configMap.get(categoryId).push({
+            type: config.type,
+            status: config.status,
+            donationType: config.donationType,
+            minAmount: config.minAmount,
+            maxAmount: config.maxAmount,
+            quantity: config.quantity,
+            amountPerQty: config.amountPerQty,
+            supportOptions: config.supportOptions,
+            categoryRemarks: config.categoryRemarks
+          });
+        }
+      });
+
+      // Map categories with their configs
+      const categoriesWithConfigs = allCategories.map(category => ({
+        _id: category._id,
+        name: category.name,
+        icon: category.icon,
+        status: category.status,
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt,
+        configs: configMap.get(category._id.toString()) || []
+      }));
+
+      return res.json({
+        success: true,
+        trustId: trustId,
+        trustName: trust.trustName,
+        categories: categoriesWithConfigs
+      });
+    }
+
+    // If no trustId, return all categories as before
+    const categories = await Category.find();
+    res.json(categories);
+  } catch (error) {
+    console.error('Get Categories Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch categories',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 }
 
 async function getSpecialCategories(req, res) {
@@ -1232,6 +1319,111 @@ async function toggleCategoryStatus(req, res) {
   }
 }
 
+// Get category details by categoryId, isNormal flag, and trustId
+async function getCategoryDetailsByTrust(req, res) {
+  try {
+    const { categoryId, isNormal, trustId } = req.query;
+
+    // Validate required parameters
+    if (!categoryId || isNormal === undefined || !trustId) {
+      return res.status(400).json({
+        success: false,
+        message: 'categoryId, isNormal, and trustId are required'
+      });
+    }
+
+    // Convert isNormal to type
+    const type = isNormal === 'true' || isNormal === true ? 'Normal' : 'Special';
+
+    // Validate ObjectId formats
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid categoryId format'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(trustId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid trustId format'
+      });
+    }
+
+    // Verify trust exists
+    const trust = await User.findById(trustId).select('_id role trustName');
+    if (!trust) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trust not found'
+      });
+    }
+
+    if (trust.role !== 'Trust') {
+      return res.status(400).json({
+        success: false,
+        message: 'Provided ID is not a Trust account'
+      });
+    }
+
+    // Get category details
+    const category = await Category.findById(categoryId).select('name icon status');
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found'
+      });
+    }
+
+    // Find the configuration
+    const config = await TrustCategoryConfig.findOne({
+      categoryId: categoryId,
+      trustId: trustId,
+      type: type
+    });
+
+    // Format response
+    const categoryDetails = {
+      category: {
+        _id: category._id,
+        name: category.name,
+        icon: category.icon,
+        status: category.status
+      },
+      trust: {
+        _id: trust._id,
+        trustName: trust.trustName
+      },
+      isNormal: isNormal === 'true' || isNormal === true,
+      config: config ? {
+        _id: config._id,
+        type: config.type,
+        donationType: config.donationType,
+        minAmount: config.minAmount || null,
+        maxAmount: config.maxAmount || null,
+        quantity: config.quantity || null,
+        amountPerQty: config.amountPerQty || null,
+        supportOptions: config.supportOptions || [],
+        categoryRemarks: config.categoryRemarks || '',
+        status: config.status,
+        createdAt: config.createdAt,
+        updatedAt: config.updatedAt
+      } : null
+    };
+
+    res.status(200).json({
+      success: true,
+      data: categoryDetails
+    });
+  } catch (err) {
+    console.error('Error fetching category details by trust:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+}
+
 // Get specific trust category configuration by categoryType, categoryId, and trustId
 async function getTrustCategoryConfigByDetails(req, res) {
   try {
@@ -1339,6 +1531,7 @@ module.exports = {
   createSpecialCategoryConfig,
   saveCategoryConfigurations,
   getTrustCategoryConfigs,
+  getCategoryDetailsByTrust,
   getTrustCategoryConfigByDetails,
   getTrustsByCategoryConfigs,
   updateNormalCategoryConfig,

@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Otp = require('../models/Otp');
+const Post = require('../models/Post');
+const TrustCategoryConfig = require('../models/TrustCategoryConfig');
 const generateOtp = require('../utils/generateOtp');
 const { sendMail } = require('../config/mailer');
 const jwt = require('jsonwebtoken');
@@ -425,23 +427,66 @@ exports.searchTrusts = async (req, res) => {
 
     const totalTrusts = await User.countDocuments(searchFilter);
 
-    // Get support count for each trust
-    const trustsWithCounts = trusts.map(trust => ({
-      _id: trust._id,
-      trustName: trust.trustName,
-      adminName: trust.adminName,
-      email: trust.email,
-      role: trust.role,
-      profilePhoto: trust.profilePhoto || null,
-      designation: trust.designation || null,
-      city: trust.city || null,
-      state: trust.state || null,
-      address: trust.address || null,
-      pincode: trust.pincode || null,
-      darpanId: trust.darpanId || null,
-      totalSupporters: trust.supportedBy ? trust.supportedBy.length : 0,
-      createdAt: trust.createdAt
-    }));
+    // Get post count and category config details for each trust
+    const trustsWithCounts = await Promise.all(
+      trusts.map(async (trust) => {
+        // Get post count for this trust
+        const postCount = await Post.countDocuments({ createdBy: trust._id });
+
+        // Get category configurations for this trust
+        const trustConfigs = await TrustCategoryConfig.find({ trustId: trust._id })
+          .populate('categoryId', 'name icon')
+          .select('type status categoryId donationType minAmount maxAmount quantity amountPerQty supportOptions categoryRemarks');
+
+        // Get unique categories with their config details
+        const categoryMap = new Map();
+        trustConfigs.forEach(config => {
+          const categoryId = config.categoryId?._id?.toString();
+          if (categoryId) {
+            if (!categoryMap.has(categoryId)) {
+              categoryMap.set(categoryId, {
+                _id: config.categoryId._id,
+                name: config.categoryId.name,
+                icon: config.categoryId.icon,
+                configs: []
+              });
+            }
+            categoryMap.get(categoryId).configs.push({
+              type: config.type,
+              status: config.status,
+              donationType: config.donationType,
+              minAmount: config.minAmount,
+              maxAmount: config.maxAmount,
+              quantity: config.quantity,
+              amountPerQty: config.amountPerQty,
+              supportOptions: config.supportOptions,
+              categoryRemarks: config.categoryRemarks
+            });
+          }
+        });
+
+        const categories = Array.from(categoryMap.values());
+
+        return {
+          _id: trust._id,
+          trustName: trust.trustName,
+          adminName: trust.adminName,
+          email: trust.email,
+          role: trust.role,
+          profilePhoto: trust.profilePhoto || null,
+          designation: trust.designation || null,
+          city: trust.city || null,
+          state: trust.state || null,
+          address: trust.address || null,
+          pincode: trust.pincode || null,
+          darpanId: trust.darpanId || null,
+          totalSupporters: trust.supportedBy ? trust.supportedBy.length : 0,
+          postCount: postCount,
+          categories: categories,
+          createdAt: trust.createdAt
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
