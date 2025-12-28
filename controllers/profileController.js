@@ -7,7 +7,7 @@ exports.getProfile = async (req, res) => {
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .select('trustName adminName name email mobile phone darpanId profilePhoto designation address state city pincode fullAddress role createdAt')
+      .select('trustName adminName name email mobile phone darpanId profilePhoto designation address state city pincode fullAddress role createdAt supportedBy')
       .lean();
 
     if (!user) {
@@ -24,7 +24,10 @@ exports.getProfile = async (req, res) => {
 
     if (user.role === 'Trust') {
       const postCount = await Post.countDocuments({ createdBy: userId });
+      // For Trust: Count how many people are supporting them (from their supportedBy array)
       const supporterCount = user.supportedBy?.length || 0;
+      // Trust doesn't save posts, so saveCount is 0
+      const saveCount = 0;
 
       profileData = {
         ...profileData,
@@ -40,10 +43,17 @@ exports.getProfile = async (req, res) => {
         pincode: user.pincode || null,
         fullAddress: user.fullAddress || null,
         postCount,
-        supporterCount
+        supporterCount,
+        saveCount
       };
     } else if (user.role === 'User') {
-      // For regular users, show basic profile info
+      // For User: Count how many NGOs/Trusts they are supporting
+      // (count documents where userId is in supportedBy array)
+      const supporterCount = await User.countDocuments({ supportedBy: userId });
+      // For User: Count how many posts they have saved
+      // (count documents where userId is in savedBy array)
+      const saveCount = await Post.countDocuments({ savedBy: userId });
+
       profileData = {
         ...profileData,
         name: user.name || 'User',
@@ -55,7 +65,9 @@ exports.getProfile = async (req, res) => {
         city: user.city,
         pincode: user.pincode,
         fullAddress: user.fullAddress,
-        designation: user.designation
+        designation: user.designation,
+        supporterCount,
+        saveCount
       };
     }
 
