@@ -20,7 +20,7 @@ async function sendVolunteerSubmissionEmail(volunteerEmail, volunteerName, trust
         <td align="center">
           <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <tr>
-              <td align="center" style="padding: 20px; background-color: #ff6f61;">
+              <td align="center" style="padding: 20px;">
                 <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
@@ -71,7 +71,7 @@ async function sendVolunteerApprovalEmail(volunteerEmail, volunteerName, trustNa
         <td align="center">
           <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <tr>
-              <td align="center" style="padding: 20px; background-color: #28a745;">
+              <td align="center" style="padding: 20px;">
                 <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>

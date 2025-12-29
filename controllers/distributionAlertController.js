@@ -27,7 +27,7 @@ async function sendDistributionAlertEmail(userEmail, userName, alertData, creato
         <td align="center">
           <table width="600" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <tr>
-              <td align="center" style="padding: 20px; background: linear-gradient(135deg, #ff6f61 0%, #fcb248 100%);">
+              <td align="center" style="padding: 20px;">
                 <img src="https://res.cloudinary.com/dcxwy01a6/image/upload/v1765426499/kindify-logo_tzapkk.png" alt="Kindify Logo" width="120" style="display: block;">
               </td>
             </tr>
