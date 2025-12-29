@@ -10,7 +10,7 @@ const upload = require('../config/multer');
 const OTP_EXPIRE_SECONDS = parseInt(process.env.OTP_EXPIRE_SECONDS || '300', 10);
 
 // Superadmin email - has Trust role but receives OTP and gets Admin privileges
-const SUPERADMIN_EMAIL = 'bondbytetechnology@gmail.com';
+const SUPERADMIN_EMAIL = 'bondbytetechnologies@gmail.com';
 
 // helper: send OTP email
 async function sendOtpEmail(toEmail, otp, userName) {
