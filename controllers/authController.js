@@ -364,13 +364,17 @@ exports.verifyLogin = async (req, res) => {
   const payload = { id: user._id, email: user.email, role: jwtRole };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-  // Send welcome email after successful login (don't block response if email fails)
-  try {
-    const userName = user.role === 'Trust' ? user.trustName || user.adminName : user.name;
-    await sendWelcomeEmail(user.email, userName, user.role);
-  } catch (err) {
-    console.error('Welcome email error:', err);
-    // Don't fail the login if email fails
+  // Send welcome email only on first login (don't block response if email fails)
+  if (!user.welcomeEmailSent) {
+    try {
+      const userName = user.role === 'Trust' ? user.trustName || user.adminName : user.name;
+      await sendWelcomeEmail(user.email, userName, user.role);
+      // Mark welcome email as sent
+      await User.findByIdAndUpdate(user._id, { welcomeEmailSent: true });
+    } catch (err) {
+      console.error('Welcome email error:', err);
+      // Don't fail the login if email fails
+    }
   }
 
   return res.json({

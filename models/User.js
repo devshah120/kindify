@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema({
 },
   supportedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Array of user IDs who support this user/trust
   fcmToken: { type: String, required: false }, // Firebase Cloud Messaging token for push notifications
+  welcomeEmailSent: { type: Boolean, default: false }, // Track if welcome email has been sent
   createdAt: { type: Date, default: Date.now }
 });
 
