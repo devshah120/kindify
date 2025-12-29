@@ -280,6 +280,7 @@ exports.joinVolunteer = async (req, res) => {
                     `Your volunteer request to ${trustName} has been submitted and is under review.`,
                     {
                         type: 'volunteer_submission',
+                        screen: 'volunteerRequest',
                         volunteerId: volunteer._id.toString(),
                         trustId: trust.toString()
                     }
@@ -298,6 +299,7 @@ exports.joinVolunteer = async (req, res) => {
                 `${fullName} has submitted a volunteer request.`,
                 {
                     type: 'new_volunteer_request',
+                    screen: 'volunteerRequest',
                     volunteerId: volunteer._id.toString(),
                     userId: userId ? userId.toString() : null
                 }
@@ -500,6 +502,7 @@ exports.updateVolunteerStatus = async (req, res) => {
                         `Congratulations! Your volunteer request to ${trustName} has been approved.`,
                         {
                             type: 'volunteer_approved',
+                            screen: 'volunteerRequest',
                             volunteerId: volunteer._id.toString(),
                             trustId: trust?._id?.toString() || null
                         }
@@ -511,6 +514,7 @@ exports.updateVolunteerStatus = async (req, res) => {
                         `Your volunteer request to ${trustName} has been ${status}.`,
                         {
                             type: 'volunteer_rejected',
+                            screen: 'volunteerRequest',
                             volunteerId: volunteer._id.toString(),
                             trustId: trust?._id?.toString() || null
                         }

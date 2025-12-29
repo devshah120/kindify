@@ -20,13 +20,21 @@ async function sendNotificationToDevice(fcmToken, title, body, data = {}) {
     return { success: false, error: errorMsg };
   }
 
+  // Convert all data values to strings (FCM requirement)
+  const stringifiedData = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== null && value !== undefined) {
+      stringifiedData[key] = String(value);
+    }
+  }
+
   const message = {
     notification: {
       title: title,
       body: body
     },
     data: {
-      ...data,
+      ...stringifiedData,
       timestamp: new Date().toISOString()
     },
     token: fcmToken,
@@ -92,13 +100,21 @@ async function sendNotificationToMultipleDevices(fcmTokens, title, body, data = 
     return { success: false, error: 'No valid FCM tokens provided' };
   }
 
+  // Convert all data values to strings (FCM requirement)
+  const stringifiedData = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== null && value !== undefined) {
+      stringifiedData[key] = String(value);
+    }
+  }
+
   const message = {
     notification: {
       title: title,
       body: body
     },
     data: {
-      ...data,
+      ...stringifiedData,
       timestamp: new Date().toISOString()
     },
     android: {
