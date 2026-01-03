@@ -510,3 +510,121 @@ exports.searchTrusts = async (req, res) => {
     });
   }
 };
+
+// Blood Emergency Register
+// POST /api/blood-emergency/register
+exports.bloodEmergencyRegister = async (req, res) => {
+  try {
+    const { personName, hospitalName, phoneNumber, email } = req.body;
+
+    // Validate required fields
+    if (!personName || !hospitalName || !phoneNumber || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required: personName, hospitalName, phoneNumber, email'
+      });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (user) {
+      // Update existing user with new information
+      user.name = personName;
+      user.mobile = phoneNumber;
+      user.phone = phoneNumber;
+      // Store hospital name in address or create a custom field
+      user.address = hospitalName;
+      await user.save();
+    } else {
+      // Create new user with role 'User'
+      user = await User.create({
+        name: personName,
+        email: email.toLowerCase().trim(),
+        mobile: phoneNumber,
+        phone: phoneNumber,
+        address: hospitalName,
+        role: 'User'
+      });
+    }
+
+    // Generate and send OTP
+    await Otp.deleteMany({ email: user.email });
+    const otpCode = generateOtp();
+    await Otp.create({ email: user.email, otp: otpCode, role: user.role });
+
+    try {
+      await sendOtpEmail(user.email, otpCode, user.name || personName);
+      return res.status(200).json({
+        success: true,
+        message: 'Registration successful. OTP sent to your email',
+        email: user.email
+      });
+    } catch (err) {
+      console.error('sendOtp error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Registration successful but failed to send OTP'
+      });
+    }
+  } catch (error) {
+    console.error('Blood Emergency Register Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Blood Emergency Login
+// POST /api/blood-emergency/login
+exports.bloodEmergencyLogin = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found. Please register first'
+      });
+    }
+
+    // Generate and send OTP
+    await Otp.deleteMany({ email: user.email });
+    const otpCode = generateOtp();
+    await Otp.create({ email: user.email, otp: otpCode, role: user.role });
+
+    try {
+      await sendOtpEmail(user.email, otpCode, user.name || 'User');
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent to your email',
+        email: user.email
+      });
+    } catch (err) {
+      console.error('sendOtp error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP'
+      });
+    }
+  } catch (error) {
+    console.error('Blood Emergency Login Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

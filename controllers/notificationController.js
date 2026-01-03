@@ -59,6 +59,48 @@ exports.removeFcmToken = async (req, res) => {
 };
 
 /**
+ * Remove FCM token for a specific user by userId
+ * DELETE /api/notifications/token/:userId
+ */
+exports.removeFcmTokenByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Remove FCM token
+    await User.findByIdAndUpdate(userId, { $unset: { fcmToken: 1 } });
+
+    res.status(200).json({
+      success: true,
+      message: 'FCM token removed successfully',
+      userId: userId
+    });
+  } catch (error) {
+    console.error('Error removing FCM token by userId:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove FCM token',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
  * Send test notification to the authenticated user
  * POST /api/notifications/test
  */

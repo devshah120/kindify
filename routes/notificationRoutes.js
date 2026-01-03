@@ -6,6 +6,7 @@ const notificationController = require('../controllers/notificationController');
 // FCM Token Management
 router.post('/notifications/token', auth, notificationController.saveFcmToken);
 router.delete('/notifications/token', auth, notificationController.removeFcmToken);
+router.delete('/notifications/token/:userId', auth, notificationController.removeFcmTokenByUserId);
 
 // Test Notification
 router.post('/notifications/test', auth, notificationController.sendTestNotification);

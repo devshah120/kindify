@@ -20,20 +20,15 @@ exports.createCampaign = async (req, res) => {
     // Validate required fields
     if (!campaignTitle || !startDate || !endDate || !category || 
         minAmount === undefined || maxAmount === undefined || 
-        goal === undefined || !description) {
+        goal === undefined) {
       return res.status(400).json({ 
-        message: 'Missing required fields. Required: campaignTitle, startDate, endDate, category, minAmount, maxAmount, goal, description' 
+        message: 'Missing required fields. Required: campaignTitle, startDate, endDate, category, minAmount, maxAmount, goal' 
       });
     }
 
     // Validate campaignTitle length
     if (campaignTitle.length > 50) {
       return res.status(400).json({ message: 'campaignTitle must be 50 characters or less' });
-    }
-
-    // Validate description length
-    if (description.length > 200) {
-      return res.status(400).json({ message: 'description must be 200 characters or less' });
     }
 
     // Validate dates

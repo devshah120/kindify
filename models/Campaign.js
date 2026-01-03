@@ -9,7 +9,7 @@ const campaignSchema = new mongoose.Schema({
   maxAmount: { type: Number, required: true },
   goal: { type: Number, required: true },
   raisedAmount: { type: Number, default: 0 },
-  description: { type: String, maxlength: 200, required: true },
+  description: { type: String, required: false },
   status: {
     type: String,
     enum: ['active', 'inactive'],

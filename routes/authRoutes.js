@@ -10,4 +10,7 @@ router.post('/verify-login', authController.verifyLogin);     // body: { email, 
 router.post('/trust/register', upload.single('darpanCertificate'), authController.registerTrust);
 router.get('/trust/all',auth, authController.getAllTrusts);
 router.get('/trust/search', authController.searchTrusts);
+// Blood Emergency endpoints
+router.post('/blood-emergency/register', authController.bloodEmergencyRegister);
+router.post('/blood-emergency/login', authController.bloodEmergencyLogin);
 module.exports = router;
