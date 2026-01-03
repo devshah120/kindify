@@ -11,6 +11,7 @@ exports.createEmergency = async (req, res) => {
       patientId,
       bloodGroup,
       requiredQty,
+      relativeName,
       relativeNumber,
       relativeAlternateNumber,
       hospitalName,
@@ -36,6 +37,7 @@ exports.createEmergency = async (req, res) => {
       patientId,
       bloodGroup,
       requiredQty,
+      relativeName, // Optional
       relativeNumber,
       relativeAlternateNumber, // Optional
       hospitalName,

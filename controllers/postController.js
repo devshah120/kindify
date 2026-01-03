@@ -109,7 +109,7 @@ exports.getPosts = async (req, res) => {
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role profilePhoto')  // Populate creator info
       .populate('categoryId', 'name icon')  // Populate category info
-      .populate('likedBy', '_id name trustName adminName')   // Populate likedBy user info
+      .populate('likedBy.userId', '_id name trustName adminName')   // Populate likedBy user info
       .populate('savedBy', '_id name trustName adminName');  // Populate savedBy user info
 
     const totalPosts = await Post.countDocuments(filter);
@@ -147,6 +147,11 @@ exports.getPosts = async (req, res) => {
       const isSupporting = userId ? !!supportMap[creatorId] : false;  // Boolean: true if current user is supporting the creator
       const supportedBy = creatorSupportersMap[creatorId] || [];  // Array of supporter IDs
       
+      // Extract user IDs from likedBy array for backward compatibility
+      const likedByUserIds = post.likedBy ? post.likedBy.map(like => 
+        like.userId ? (like.userId._id ? like.userId._id.toString() : like.userId.toString()) : null
+      ).filter(id => id !== null) : [];
+      
       return {
         _id: post._id,
         name: creatorName,
@@ -169,9 +174,9 @@ exports.getPosts = async (req, res) => {
         supportedBy: supportedBy,  // Array of user IDs who support this creator
         totalSupporters: supportedBy.length,  // Count of supporters
         createdAt: post.createdAt,
-        likedBy: post.likedBy,
+        likedBy: likedByUserIds,  // Array of user IDs for backward compatibility
         savedBy: post.savedBy,
-        totalLikes: post.likedBy.length,
+        totalLikes: post.likedBy ? post.likedBy.length : 0,
         totalSaves: post.savedBy.length
       };
     });
@@ -208,10 +213,11 @@ exports.likePost = async (req, res) => {
     const post = await Post.findById(postId).populate('createdBy', 'trustName adminName name role _id');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    const wasAlreadyLiked = post.likedBy.includes(userId);
+    // Check if user already liked (check by userId in likedBy array)
+    const wasAlreadyLiked = post.likedBy.some(like => like.userId.toString() === userId.toString());
     
     if (!wasAlreadyLiked) {
-      post.likedBy.push(userId);
+      post.likedBy.push({ userId, likedAt: new Date() });
       await post.save();
 
       // Send notification to Trust when user likes their post (only if Trust created it)
@@ -258,7 +264,7 @@ exports.unlikePost = async (req, res) => {
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    post.likedBy = post.likedBy.filter(id => id.toString() !== userId);
+    post.likedBy = post.likedBy.filter(like => like.userId.toString() !== userId.toString());
     await post.save();
 
     res.json({ success: true, message: 'Post unliked successfully', totalLikes: post.likedBy.length });
@@ -359,7 +365,7 @@ exports.getSavedPosts = async (req, res) => {
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .populate('categoryId', 'name icon')
-      .populate('likedBy', '_id name trustName adminName')
+      .populate('likedBy.userId', '_id name trustName adminName')
       .populate('savedBy', '_id name trustName adminName');
 
     const totalSavedPosts = await Post.countDocuments({ savedBy: userId });
@@ -396,6 +402,11 @@ exports.getSavedPosts = async (req, res) => {
       const isSupporting = !!supportMap[creatorId];  // Boolean: true if current user is supporting the creator
       const supportedBy = creatorSupportersMap[creatorId] || [];  // Array of supporter IDs
       
+      // Extract user IDs from likedBy array for backward compatibility
+      const likedByUserIds = post.likedBy ? post.likedBy.map(like => 
+        like.userId ? (like.userId._id ? like.userId._id.toString() : like.userId.toString()) : null
+      ).filter(id => id !== null) : [];
+      
       return {
         _id: post._id,
         name: creatorName,
@@ -418,9 +429,9 @@ exports.getSavedPosts = async (req, res) => {
         supportedBy: supportedBy,  // Array of user IDs who support this creator
         totalSupporters: supportedBy.length,  // Count of supporters
         createdAt: post.createdAt,
-        likedBy: post.likedBy,
+        likedBy: likedByUserIds,  // Array of user IDs for backward compatibility
         savedBy: post.savedBy,
-        totalLikes: post.likedBy.length,
+        totalLikes: post.likedBy ? post.likedBy.length : 0,
         totalSaves: post.savedBy.length
       };
     });
@@ -495,7 +506,7 @@ exports.getMyPosts = async (req, res) => {
       .limit(limit)
       .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .populate('categoryId', 'name icon')
-      .populate('likedBy', '_id name trustName adminName')
+      .populate('likedBy.userId', '_id name trustName adminName')
       .populate('savedBy', '_id name trustName adminName');
 
     const totalPosts = await Post.countDocuments(filter);
@@ -531,6 +542,11 @@ exports.getMyPosts = async (req, res) => {
       const isSupporting = !!supportMap[creatorId];
       const supportedBy = creatorSupportersMap[creatorId] || [];
       
+      // Extract user IDs from likedBy array for backward compatibility
+      const likedByUserIds = post.likedBy ? post.likedBy.map(like => 
+        like.userId ? (like.userId._id ? like.userId._id.toString() : like.userId.toString()) : null
+      ).filter(id => id !== null) : [];
+      
       return {
         _id: post._id,
         name: creatorName,
@@ -553,9 +569,9 @@ exports.getMyPosts = async (req, res) => {
         supportedBy: supportedBy,
         totalSupporters: supportedBy.length,
         createdAt: post.createdAt,
-        likedBy: post.likedBy,
+        likedBy: likedByUserIds,  // Array of user IDs for backward compatibility
         savedBy: post.savedBy,
-        totalLikes: post.likedBy.length,
+        totalLikes: post.likedBy ? post.likedBy.length : 0,
         totalSaves: post.savedBy.length
       };
     });
@@ -608,7 +624,7 @@ exports.searchPosts = async (req, res) => {
       .limit(limitNum)
       .populate('createdBy', 'trustName adminName name email role profilePhoto')
       .populate('categoryId', 'name icon')
-      .populate('likedBy', '_id name trustName adminName')
+      .populate('likedBy.userId', '_id name trustName adminName')
       .populate('savedBy', '_id name trustName adminName');
 
     const totalPosts = await Post.countDocuments(searchFilter);
@@ -643,6 +659,11 @@ exports.searchPosts = async (req, res) => {
       const isSupporting = userId ? !!supportMap[creatorId] : false;
       const supportedBy = creatorSupportersMap[creatorId] || [];
       
+      // Extract user IDs from likedBy array for backward compatibility
+      const likedByUserIds = post.likedBy ? post.likedBy.map(like => 
+        like.userId ? (like.userId._id ? like.userId._id.toString() : like.userId.toString()) : null
+      ).filter(id => id !== null) : [];
+      
       return {
         _id: post._id,
         name: creatorName,
@@ -665,9 +686,9 @@ exports.searchPosts = async (req, res) => {
         supportedBy: supportedBy,
         totalSupporters: supportedBy.length,
         createdAt: post.createdAt,
-        likedBy: post.likedBy,
+        likedBy: likedByUserIds,  // Array of user IDs for backward compatibility
         savedBy: post.savedBy,
-        totalLikes: post.likedBy.length,
+        totalLikes: post.likedBy ? post.likedBy.length : 0,
         totalSaves: post.savedBy.length
       };
     });
@@ -691,42 +712,70 @@ exports.searchPosts = async (req, res) => {
   }
 };
 
-// Get users who liked a post by post ID
+// Get all posts by trust ID with all likes (Instagram-style)
 exports.getPostLikes = async (req, res) => {
   try {
-    const { postId } = req.params;
+    const { trustId } = req.params;
 
-    if (!postId) {
+    if (!trustId) {
       return res.status(400).json({ 
         success: false,
-        message: 'Post ID is required' 
+        message: 'Trust ID is required' 
       });
     }
 
-    const post = await Post.findById(postId)
-      .populate('likedBy', '_id name trustName adminName email role profilePhoto');
+    // Get all posts created by this trust
+    const posts = await Post.find({ createdBy: trustId })
+      .populate({
+        path: 'likedBy.userId',
+        select: '_id name trustName adminName email role profilePhoto'
+      })
+      .sort({ createdAt: -1 });
 
-    if (!post) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Post not found' 
+    if (!posts || posts.length === 0) {
+      return res.status(200).json({
+        success: true,
+        trustId: trustId,
+        totalPosts: 0,
+        totalLikes: 0,
+        likedBy: []
       });
     }
 
-    // Format the likedBy users
-    const likedByUsers = post.likedBy.map(user => ({
-      _id: user._id,
-      name: user.role === 'Trust' ? user.trustName || user.adminName : user.name,
-      email: user.email,
-      role: user.role,
-      profilePhoto: user.profilePhoto || null
-    }));
+    // Format all likes for all posts (Instagram-style - entry for every like)
+    // Sort by most recent likes first
+    const allLikes = [];
+    let totalLikesCount = 0;
+
+    posts.forEach(post => {
+      if (post.likedBy && post.likedBy.length > 0) {
+        post.likedBy.forEach(like => {
+          if (like.userId) {
+            allLikes.push({
+              _id: like.userId._id,
+              name: like.userId.role === 'Trust' ? like.userId.trustName || like.userId.adminName : like.userId.name,
+              email: like.userId.email,
+              role: like.userId.role,
+              profilePhoto: like.userId.profilePhoto || null,
+              postId: post._id,
+              postName: post.name,
+              likedAt: like.likedAt
+            });
+            totalLikesCount++;
+          }
+        });
+      }
+    });
+
+    // Sort by most recent likes first
+    allLikes.sort((a, b) => new Date(b.likedAt) - new Date(a.likedAt));
 
     res.status(200).json({
       success: true,
-      postId: post._id,
-      totalLikes: post.likedBy.length,
-      likedBy: likedByUsers
+      trustId: trustId,
+      totalPosts: posts.length,
+      totalLikes: totalLikesCount,
+      likedBy: allLikes  // Array of all likes sorted by most recent first
     });
 
   } catch (error) {

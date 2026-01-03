@@ -6,6 +6,7 @@ const emergencySchema = new mongoose.Schema({
   patientId: { type: String, required: false },
   bloodGroup: { type: String, required: true },
   requiredQty: { type: Number, required: true },
+  relativeName: { type: String, required: false },
   relativeNumber: { type: String, required: true },
   relativeAlternateNumber: { type: String, required: false },
   hospitalName: { type: String, required: true },
