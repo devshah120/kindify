@@ -110,7 +110,7 @@ exports.createCampaign = async (req, res) => {
 // GET /api/campaigns - Get all campaigns
 exports.getCampaigns = async (req, res) => {
   try {
-    let { page = 1, limit = 10, category } = req.query;
+    let { page = 1, limit = 10, category, userId } = req.query;
     page = parseInt(page);
     limit = parseInt(limit);
 
@@ -124,6 +124,16 @@ exports.getCampaigns = async (req, res) => {
         query.category = category;
       } else {
         return res.status(400).json({ error: 'Invalid category ID format' });
+      }
+    }
+    
+    // Filter by userId (createdBy) if provided
+    if (userId) {
+      // Check if userId is a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        query.createdBy = userId;
+      } else {
+        return res.status(400).json({ error: 'Invalid userId format' });
       }
     }
 
