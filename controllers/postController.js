@@ -730,6 +730,7 @@ exports.getPostLikes = async (req, res) => {
         path: 'likedBy.userId',
         select: '_id name trustName adminName email role profilePhoto'
       })
+      .populate('categoryId', 'name icon')
       .sort({ createdAt: -1 });
 
     if (!posts || posts.length === 0) {
@@ -757,8 +758,18 @@ exports.getPostLikes = async (req, res) => {
               email: like.userId.email,
               role: like.userId.role,
               profilePhoto: like.userId.profilePhoto || null,
-              postId: post._id,
-              postName: post.name,
+              post: {
+                _id: post._id,
+                name: post.name,
+                location: post.location || null,
+                pictures: post.pictures || [],
+                category: post.categoryId ? {
+                  _id: post.categoryId._id,
+                  name: post.categoryId.name,
+                  icon: post.categoryId.icon
+                } : null,
+                createdAt: post.createdAt
+              },
               likedAt: like.likedAt
             });
             totalLikesCount++;
