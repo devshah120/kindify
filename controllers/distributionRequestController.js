@@ -11,6 +11,7 @@ exports.createDistributionRequest = async (req, res) => {
       date,
       categoryId,
       trustName,
+      trustId,
       phone,
       email,
       streetName,
@@ -50,6 +51,11 @@ exports.createDistributionRequest = async (req, res) => {
       requestData.date = date;
     }
 
+    // Include trustId if provided
+    if (trustId) {
+      requestData.trustId = trustId;
+    }
+
     const distributionRequest = new DistributionRequest(requestData);
 
     await distributionRequest.save();
@@ -80,24 +86,31 @@ exports.createDistributionRequest = async (req, res) => {
       console.error('❌ Error sending user confirmation notification:', userNotificationError);
     }
 
-    // Find trust admin to notify (if trustName is provided, find the trust)
+    // Find trust admin to notify (prefer trustId if provided, otherwise search by trustName)
     try {
-      if (trustName) {
-        const trust = await User.findOne({ trustName: trustName, role: 'Trust' }).select('_id trustName');
-        if (trust) {
-          await sendNotificationToUser(
-            trust._id,
-            'New Distribution Request',
-            `${userName} has submitted a distribution request for ${requiredItem}`,
-            {
-              type: 'distribution_request_created',
-              requestId: distributionRequest._id.toString(),
-              userId: userId,
-              requiredItem: requiredItem
-            }
-          );
-          console.log(`✅ Notification sent to trust about distribution request: ${distributionRequest._id}`);
+      let trust = null;
+      if (trustId) {
+        trust = await User.findById(trustId).select('_id trustName role');
+        if (trust && trust.role !== 'Trust') {
+          trust = null; // Ensure it's actually a trust
         }
+      } else if (trustName) {
+        trust = await User.findOne({ trustName: trustName, role: 'Trust' }).select('_id trustName');
+      }
+      
+      if (trust) {
+        await sendNotificationToUser(
+          trust._id,
+          'New Distribution Request',
+          `${userName} has submitted a distribution request for ${requiredItem}`,
+          {
+            type: 'distribution_request_created',
+            requestId: distributionRequest._id.toString(),
+            userId: userId,
+            requiredItem: requiredItem
+          }
+        );
+        console.log(`✅ Notification sent to trust about distribution request: ${distributionRequest._id}`);
       }
     } catch (notificationError) {
       console.error('❌ Error sending distribution request notification:', notificationError);
@@ -120,16 +133,18 @@ exports.createDistributionRequest = async (req, res) => {
 // Get all distribution requests
 exports.getAllDistributionRequests = async (req, res) => {
   try {
-    const { status, userId, trustName } = req.query;
+    const { status, userId, trustName, trustId } = req.query;
     const filter = {};
     
     if (status) filter.status = status;
     if (userId) filter.userId = userId;
     if (trustName) filter.trustName = trustName;
+    if (trustId) filter.trustId = trustId;
 
     const requests = await DistributionRequest.find(filter)
       .populate('categoryId', 'name')
       .populate('userId', 'name email phone profilePhoto')
+      .populate('trustId', 'trustName email')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ 
@@ -147,7 +162,8 @@ exports.getDistributionRequestById = async (req, res) => {
   try {
     const request = await DistributionRequest.findById(req.params.id)
       .populate('categoryId', 'name')
-      .populate('userId', 'name email phone profilePhoto');
+      .populate('userId', 'name email phone profilePhoto')
+      .populate('trustId', 'trustName email');
 
     if (!request) {
       return res.status(404).json({ 
@@ -176,7 +192,8 @@ exports.updateDistributionRequest = async (req, res) => {
       updateData, 
       { new: true, runValidators: true }
     ).populate('categoryId', 'name')
-     .populate('userId', 'name email phone profilePhoto');
+     .populate('userId', 'name email phone profilePhoto')
+     .populate('trustId', 'trustName email');
 
     if (!request) {
       return res.status(404).json({ 
@@ -255,6 +272,7 @@ exports.getUserDistributionRequests = async (req, res) => {
     const requests = await DistributionRequest.find({ userId: req.params.userId })
       .populate('categoryId', 'name')
       .populate('userId', 'name email phone profilePhoto')
+      .populate('trustId', 'trustName email')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ 
