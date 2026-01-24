@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const distributionRequestController = require('../controllers/distributionRequestController');
 const uploadProofImage = require('../middlewares/uploadProofImage');
+const optionalAuth = require('../middlewares/optionalAuth');
 
 // Create a new distribution request (with file upload)
 router.post(
@@ -11,7 +12,8 @@ router.post(
 );
 
 // Get all distribution requests (with optional filters)
-router.get('/', distributionRequestController.getAllDistributionRequests);
+// Uses optionalAuth to auto-filter by trustName if Trust user is authenticated
+router.get('/', optionalAuth, distributionRequestController.getAllDistributionRequests);
 
 // Get distribution request by ID
 router.get('/:id', distributionRequestController.getDistributionRequestById);

@@ -19,11 +19,6 @@ const distributionRequestSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  trustId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: false
-  },
   phone: {
     type: String,
     required: true,
