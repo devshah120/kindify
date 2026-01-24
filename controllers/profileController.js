@@ -7,7 +7,7 @@ exports.getProfile = async (req, res) => {
     const { userId } = req.params;
 
     const user = await User.findById(userId)
-      .select('trustName adminName name email mobile phone darpanId profilePhoto designation address state city pincode fullAddress role createdAt supportedBy')
+      .select('trustName adminName name email mobile phone darpanId profilePhoto designation address state city pincode fullAddress role createdAt supportedBy razorpayKey razorpaySecret')
       .lean();
 
     if (!user) {
@@ -42,6 +42,8 @@ exports.getProfile = async (req, res) => {
         city: user.city || null,
         pincode: user.pincode || null,
         fullAddress: user.fullAddress || null,
+        razorpayKey: user.razorpayKey || null,
+        razorpaySecret: user.razorpaySecret || null,
         postCount,
         supporterCount,
         saveCount
@@ -66,6 +68,8 @@ exports.getProfile = async (req, res) => {
         pincode: user.pincode,
         fullAddress: user.fullAddress,
         designation: user.designation,
+        razorpayKey: user.razorpayKey || null,
+        razorpaySecret: user.razorpaySecret || null,
         supporterCount,
         saveCount
       };
@@ -149,7 +153,7 @@ exports.editProfile = async (req, res) => {
       }
     }
     
-    const { trustName, adminName, name, mobile, phone, darpanId, designation, address, state, city, pincode, fullAddress, email } = requestBody;
+    const { trustName, adminName, name, mobile, phone, darpanId, designation, address, state, city, pincode, fullAddress, email, razorpayKey, razorpaySecret } = requestBody;
 
     // Check if user exists
     const user = await User.findById(userId);
@@ -178,6 +182,8 @@ exports.editProfile = async (req, res) => {
       if (city !== undefined) updateFields.city = city;
       if (pincode !== undefined) updateFields.pincode = pincode;
       if (fullAddress !== undefined) updateFields.fullAddress = fullAddress;
+      if (razorpayKey !== undefined) updateFields.razorpayKey = razorpayKey;
+      if (razorpaySecret !== undefined) updateFields.razorpaySecret = razorpaySecret;
     } else if (user.role === 'User') {
       // Regular users can edit basic profile fields
       if (name !== undefined) updateFields.name = name;
@@ -190,6 +196,8 @@ exports.editProfile = async (req, res) => {
       if (pincode !== undefined) updateFields.pincode = pincode;
       if (fullAddress !== undefined) updateFields.fullAddress = fullAddress;
       if (email !== undefined) updateFields.email = email;
+      if (razorpayKey !== undefined) updateFields.razorpayKey = razorpayKey;
+      if (razorpaySecret !== undefined) updateFields.razorpaySecret = razorpaySecret;
       
       // Users cannot edit trust-specific fields
       if (trustName !== undefined || adminName !== undefined || darpanId !== undefined) {
@@ -220,7 +228,7 @@ exports.editProfile = async (req, res) => {
       userId,
       updateFields,
       { new: true, runValidators: true }
-    ).select('trustName adminName name mobile phone darpanId profilePhoto designation address state city pincode fullAddress email role createdAt');
+    ).select('trustName adminName name mobile phone darpanId profilePhoto designation address state city pincode fullAddress email role createdAt razorpayKey razorpaySecret');
 
     // Prepare response with profile photo URL
     const responseUser = {
