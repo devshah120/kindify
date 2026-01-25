@@ -104,7 +104,7 @@ exports.getProfilePosts = async (req, res) => {
 
     const postsWithUserInfo = posts.map(post => {
       const creatorName = post.createdBy.role === 'Trust' ? post.createdBy.trustName : post.createdBy.name;
-      
+
       return {
         _id: post._id,
         name: creatorName, // Show creator's name instead of post title
@@ -142,7 +142,7 @@ exports.getProfilePosts = async (req, res) => {
 exports.editProfile = async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     // Try to parse body if it's a string
     let requestBody = req.body;
     if (typeof req.body === 'string') {
@@ -152,7 +152,7 @@ exports.editProfile = async (req, res) => {
         return res.status(400).json({ message: 'Invalid JSON format' });
       }
     }
-    
+
     const { trustName, adminName, name, mobile, phone, darpanId, designation, address, state, city, pincode, fullAddress, email, razorpayKey, razorpaySecret } = requestBody;
 
     // Check if user exists
@@ -168,7 +168,7 @@ exports.editProfile = async (req, res) => {
 
     // Prepare update object with only provided fields based on user role
     const updateFields = {};
-    
+
     if (user.role === 'Trust') {
       // Trust users can edit all trust-related fields
       if (trustName !== undefined) updateFields.trustName = trustName;
@@ -198,11 +198,11 @@ exports.editProfile = async (req, res) => {
       if (email !== undefined) updateFields.email = email;
       if (razorpayKey !== undefined) updateFields.razorpayKey = razorpayKey;
       if (razorpaySecret !== undefined) updateFields.razorpaySecret = razorpaySecret;
-      
+
       // Users cannot edit trust-specific fields
       if (trustName !== undefined || adminName !== undefined || darpanId !== undefined) {
-        return res.status(400).json({ 
-          message: 'Invalid field for User role. trustName, adminName and darpanId are only for Trust accounts.' 
+        return res.status(400).json({
+          message: 'Invalid field for User role. trustName, adminName and darpanId are only for Trust accounts.'
         });
       }
     }
@@ -218,8 +218,8 @@ exports.editProfile = async (req, res) => {
 
     // Check if updateFields is empty
     if (Object.keys(updateFields).length === 0) {
-      return res.status(400).json({ 
-        message: 'No valid fields to update for this user role' 
+      return res.status(400).json({
+        message: 'No valid fields to update for this user role'
       });
     }
 
@@ -243,9 +243,9 @@ exports.editProfile = async (req, res) => {
   } catch (error) {
     console.error(error);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        message: 'Validation error', 
-        errors: Object.values(error.errors).map(err => err.message) 
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => err.message)
       });
     }
     res.status(500).json({ message: 'Server error' });
@@ -314,11 +314,34 @@ exports.getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+};
+
+exports.getRazorpayCredentials = async (req, res) => {
+  try {
+    // req.user is populated by the auth middleware
+    const userId = req.user.id;
+
+    const user = await User.findById(userId)
+      .select('razorpayKey razorpaySecret')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      razorpayKey: user.razorpayKey || null,
+      razorpaySecret: user.razorpaySecret || null
+    });
+  } catch (error) {
+    console.error('Error fetching Razorpay credentials:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

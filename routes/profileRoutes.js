@@ -16,4 +16,7 @@ router.get('/users', auth, profileController.getAllUsers);
 // Edit profile (requires login and ownership) - supports profile photo upload
 router.post('/profile/:userId', auth, uploadProfilePhoto, profileController.editProfile);
 
+// Get Razorpay credentials (requires login)
+router.get('/razorpay-credentials', auth, profileController.getRazorpayCredentials);
+
 module.exports = router;
