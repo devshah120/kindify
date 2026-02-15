@@ -22,13 +22,13 @@ exports.savePayment = async (req, res) => {
         let finalDonorEmail = donorEmail;
         let finalDonorPhone = donorPhone;
 
-        // If donorId is provided but details are missing, look them up in DB
-        if (donorId && (!finalDonorName || !finalDonorEmail || !finalDonorPhone)) {
+        // If donorId is provided, prioritize looking up the actual details in DB
+        if (donorId) {
             const user = await User.findById(donorId).select('name trustName adminName email mobile phone');
             if (user) {
-                finalDonorName = finalDonorName || user.name || 'Donor';
-                finalDonorEmail = finalDonorEmail || user.email;
-                finalDonorPhone = finalDonorPhone || user.mobile || user.phone;
+                finalDonorName = user.name || finalDonorName;
+                finalDonorEmail = user.email || finalDonorEmail;
+                finalDonorPhone = user.mobile || user.phone || finalDonorPhone;
             }
         }
 
