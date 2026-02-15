@@ -315,7 +315,7 @@ exports.login = async (req, res) => {
   await Otp.create({ email: user.email, otp: otpCode, role: user.role });
 
   try {
-    await sendOtpEmail(user.email, otpCode);
+    // await sendOtpEmail(user.email, otpCode);
     return res.json({ message: 'OTP sent to registered email' });
   } catch (err) {
     console.error('sendOtp error:', err);
@@ -554,7 +554,7 @@ exports.bloodEmergencyRegister = async (req, res) => {
     await Otp.create({ email: user.email, otp: otpCode, role: user.role });
 
     try {
-      await sendOtpEmail(user.email, otpCode, user.name || personName);
+      // await sendOtpEmail(user.email, otpCode, user.name || personName);
       return res.status(200).json({
         success: true,
         message: 'Registration successful. OTP sent to your email',
@@ -606,7 +606,7 @@ exports.bloodEmergencyLogin = async (req, res) => {
     await Otp.create({ email: user.email, otp: otpCode, role: user.role });
 
     try {
-      await sendOtpEmail(user.email, otpCode, user.name || 'User');
+      // await sendOtpEmail(user.email, otpCode, user.name || 'User');
       return res.status(200).json({
         success: true,
         message: 'OTP sent to your email',
