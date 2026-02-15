@@ -1,4 +1,5 @@
 const Payment = require('../models/Payment');
+const User = require('../models/User');
 
 exports.savePayment = async (req, res) => {
     try {
@@ -17,6 +18,20 @@ exports.savePayment = async (req, res) => {
             donorPhone
         } = req.body;
 
+        let finalDonorName = donorName;
+        let finalDonorEmail = donorEmail;
+        let finalDonorPhone = donorPhone;
+
+        // If donorId is provided but details are missing, look them up in DB
+        if (donorId && (!finalDonorName || !finalDonorEmail || !finalDonorPhone)) {
+            const user = await User.findById(donorId).select('name trustName adminName email mobile phone');
+            if (user) {
+                finalDonorName = finalDonorName || user.name || 'Donor';
+                finalDonorEmail = finalDonorEmail || user.email;
+                finalDonorPhone = finalDonorPhone || user.mobile || user.phone;
+            }
+        }
+
         const newPayment = new Payment({
             paymentId,
             amount,
@@ -27,9 +42,9 @@ exports.savePayment = async (req, res) => {
             campaignId,
             campaignTitle,
             donorId,
-            donorName,
-            donorEmail,
-            donorPhone
+            donorName: finalDonorName,
+            donorEmail: finalDonorEmail,
+            donorPhone: finalDonorPhone
         });
 
         await newPayment.save();
