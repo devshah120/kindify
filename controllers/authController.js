@@ -380,7 +380,16 @@ exports.verifyLogin = async (req, res) => {
   return res.json({
     message: 'Login successful',
     token,
-    user: { id: user._id, email: user.email, role: jwtRole }
+    user: {
+      id: user._id,
+      email: user.email,
+      role: jwtRole,
+      name: user.name,
+      trustName: user.trustName,
+      adminName: user.adminName,
+      mobile: user.mobile,
+      phone: user.phone
+    }
   });
 };
 

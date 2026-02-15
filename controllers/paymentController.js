@@ -4,8 +4,6 @@ exports.savePayment = async (req, res) => {
     try {
         const {
             paymentId,
-            orderId,
-            signature,
             amount,
             currency,
             status,
@@ -21,8 +19,6 @@ exports.savePayment = async (req, res) => {
 
         const newPayment = new Payment({
             paymentId,
-            orderId,
-            signature,
             amount,
             currency,
             status,
