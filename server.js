@@ -5,11 +5,11 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('./config/firebase'); // Initialize Firebase Admin SDK
 const fs = require('fs');
-const path = require('path'); 
+const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const postRoutes = require('./routes/postRoutes');
-const storyRoutes = require('./routes/storyRoutes'); 
+const storyRoutes = require('./routes/storyRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const volunteerRoutes = require('./routes/volunteerRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
@@ -21,6 +21,7 @@ const emergencyRoutes = require('./routes/emergencyRoutes');
 const missingPersonRoutes = require('./routes/missingPersonRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const app = express();
 
 // CORS configuration - Allow all origins from everywhere
@@ -47,7 +48,7 @@ mongoose.connect(process.env.MONGO_URI, {
   .catch(err => {
     console.error('MongoDB connection error:', err);
     process.exit(1);
-});
+  });
 
 app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes); // Mount auth routes under /api/auth to match documentation
@@ -66,6 +67,7 @@ app.use('/api', emergencyRoutes);
 app.use('/api', missingPersonRoutes);
 app.use('/api', campaignRoutes);
 app.use('/api', notificationRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
