@@ -324,11 +324,10 @@ exports.getAllUsers = async (req, res) => {
 
 exports.getRazorpayCredentials = async (req, res) => {
   try {
-    // req.user is populated by the auth middleware
-    const userId = req.user.id;
+    const userId = req.query.trustId || req.user.id;
 
     const user = await User.findById(userId)
-      .select('razorpayKey razorpaySecret')
+      .select('razorpayKey role')
       .lean();
 
     if (!user) {
@@ -336,8 +335,7 @@ exports.getRazorpayCredentials = async (req, res) => {
     }
 
     res.status(200).json({
-      razorpayKey: user.razorpayKey || null,
-      razorpaySecret: user.razorpaySecret || null
+      razorpayKey: user.razorpayKey || null
     });
   } catch (error) {
     console.error('Error fetching Razorpay credentials:', error);
